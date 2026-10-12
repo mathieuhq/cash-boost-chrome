@@ -15,13 +15,13 @@
 ## Fonctionnement
 
 1. Dans le side panel, vous créez une **campagne** : l'URL d'un de vos tweets, le mot-clé (« GUIDE ») et le lien du lead magnet. Les variantes de messages et la durée de surveillance se règlent une fois pour toutes dans l'onglet Options.
-2. Toutes les 5 à 15 minutes, l'extension lit les réponses directes au tweet.
+2. Toutes les 5 à 15 minutes (moins souvent quand le post se calme, jamais la nuit), l'extension lit les réponses directes au tweet.
 3. Chaque commentaire est classé :
    - le mot-clé est présent (après normalisation de la casse, des accents et des emojis) : le commentaire est retenu ;
    - sinon, le modèle [Jev](docs/adr/0006-classification-jev.md) estime si la personne demande le lead magnet. Au-dessus de 0,8 le commentaire est traité, entre 0,4 et 0,8 il attend votre validation en un clic, en dessous il est ignoré. Jev demande votre propre clé OpenRouter ; sans clé, seuls les commentaires qui contiennent le mot-clé sont traités, les autres attendent.
 4. Pour chaque lead, l'extension regarde d'abord dans les DMs si le lien a déjà été envoyé. S'il ne l'a pas été, elle envoie le DM, puis like le commentaire et répond publiquement. Si les DMs sont fermés, elle répond « ouvre tes DMs » et retente à chaque cycle.
 
-Les actions passent par une file cadencée par des délais aléatoires et des quotas par compte (DMs par jour, likes par heure, réponses par jour). Toutes les campagnes s'arrêtent si X renvoie un signal de restriction.
+Les actions suivent le rythme d'une personne : un lead traité d'une traite, des délais courts le plus souvent et longs parfois, une pause après quelques actions, rien entre 21h et 8h, le DM tapé mot à mot. Des quotas par compte (DMs par jour, likes par heure, réponses par jour) plafonnent le tout, et toutes les campagnes s'arrêtent si X renvoie un signal de restriction.
 
 L'extension est gratuite et ne demande aucun compte. Tout reste dans le navigateur (`chrome.storage.local`) : campagnes, leads, files et votre clé OpenRouter. Le texte d'un commentaire ne sort du navigateur que pour être classé par Jev, envoyé directement à OpenRouter avec votre clé.
 

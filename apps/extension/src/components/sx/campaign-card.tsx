@@ -32,16 +32,13 @@ export function CampaignCard({ campaign, now, onPause, onResume, onExport, onDel
 
   return (
     <article className="flex flex-col gap-4 rounded-xl bg-card p-4 text-card-foreground shadow-card">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <Gem tone={live ? "brand" : "muted"} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
             <h3 className="truncate text-sm leading-5 font-medium">{campaign.title}</h3>
             <StatusBadge status={status} />
           </div>
-          {campaign.tweetText && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{campaign.tweetText}</p>
-          )}
         </div>
       </div>
 

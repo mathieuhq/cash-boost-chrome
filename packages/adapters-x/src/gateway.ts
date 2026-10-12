@@ -5,7 +5,7 @@ import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, DEFAULT_QUERY_IDS, type Operat
 import { toXError, type XResponse } from "./errors"
 import { BRIDGE_KEY, type Bridge, type Discovery, type PageRequest } from "./page/bridge"
 import { missingFeatures, parseTweetDetail, parseUser, type ParsedTweet } from "./parse"
-import { readConversation, sendMessage, XCHAT_HISTORY, type ChatPage } from "./xchat"
+import { DEFAULT_TYPING_PACE, readConversation, sendMessage, XCHAT_HISTORY, type ChatPage } from "./xchat"
 
 /** Executes a self-contained function in the x.com tab (XTab in adapters-chrome). */
 export interface PageRunner {
@@ -26,8 +26,12 @@ function invoke(key: string, method: string, args: unknown[]): Promise<Invocatio
 }
 
 const MAX_REPLY_PAGES = 10
+/** Between two pages of replies, in ms: the time it takes a person to scroll down. */
+const SCROLL_PAUSE: [number, number] = [700, 2_200]
 const XCHAT_LOAD_TIMEOUT = 20_000
 const XCHAT_SEND_TIMEOUT = 15_000
+
+const defaultWait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 export class XWebGateway implements XGateway {
   private discovery: Promise<Discovery | null> | null = null
@@ -39,7 +43,9 @@ export class XWebGateway implements XGateway {
     private readonly page: PageRunner,
     private readonly config: ConfigSource,
     /** Dedicated tab for XChat, so the user's own x.com tab never navigates. */
-    private readonly chat?: ChatPage
+    private readonly chat?: ChatPage,
+    /** Pauses between two pages of a scan; instant in tests. */
+    private readonly wait: (ms: number) => Promise<void> = defaultWait
   ) {}
 
   private async bridge<T>(method: BridgeMethod, ...args: unknown[]): Promise<T> {
@@ -150,6 +156,7 @@ export class XWebGateway implements XGateway {
     const used = new Set<string>()
     for (let pages = 0; queue.length && pages < MAX_REPLY_PAGES; pages++) {
       const cursor = queue.shift()
+      if (cursor) await this.wait(SCROLL_PAUSE[0] + Math.random() * (SCROLL_PAUSE[1] - SCROLL_PAUSE[0]))
       const page = await this.detail(tweetId, cursor)
       let fresh = 0
       for (const tweet of page.tweets) {
@@ -255,7 +262,7 @@ export class XWebGateway implements XGateway {
     }
     if (read.messages.some((message) => containsLink(message, links))) return "already_sent"
 
-    const sent = await this.chat.run(sendMessage, [selectors, text, XCHAT_SEND_TIMEOUT])
+    const sent = await this.chat.run(sendMessage, [selectors, text, XCHAT_SEND_TIMEOUT, DEFAULT_TYPING_PACE])
     if (sent.state === "no_send_button") throw new XError("xchat_unavailable", "xchat_no_send")
     // Retried later: the DMs are read again first, so a message that did go out is not sent twice.
     if (sent.state === "unconfirmed") throw new XError("transient", "xchat_unconfirmed")

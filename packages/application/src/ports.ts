@@ -115,5 +115,7 @@ export interface EngineDeps {
   scheduler: Scheduler
   clock: Clock
   random: Random
+  /** Pauses for `ms` (setTimeout in the extension, instant in tests): short waits inside one Action chain. */
+  wait: (ms: number) => Promise<void>
   ids: () => string
 }

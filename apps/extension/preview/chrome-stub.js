@@ -106,7 +106,24 @@
     },
   }
 
-  let store = structuredClone(scenarios[scenario] ?? scenarios.panel)
+  // Options survive a reload, like chrome.storage.local in the extension; one slot per scenario.
+  const CONFIG_KEYS = ["options:campaignDefaults", "openrouter:key"]
+  const saved = `cash-boost-preview:${scenario}`
+  const readSaved = () => {
+    try {
+      return JSON.parse(localStorage.getItem(saved) ?? "{}")
+    } catch {
+      return {}
+    }
+  }
+  const save = () => {
+    try {
+      const config = Object.fromEntries(CONFIG_KEYS.filter((k) => k in store).map((k) => [k, store[k]]))
+      localStorage.setItem(saved, JSON.stringify(config))
+    } catch {}
+  }
+
+  let store = { ...structuredClone(scenarios[scenario] ?? scenarios.panel), ...readSaved() }
   const listeners = new Set()
   const pick = (keys) => {
     if (keys == null) return structuredClone(store)
@@ -117,8 +134,10 @@
     const changes = {}
     for (const [k, v] of Object.entries(items)) {
       changes[k] = { oldValue: store[k], newValue: v }
-      store[k] = v
+      if (v === undefined) delete store[k]
+      else store[k] = v
     }
+    if (Object.keys(items).some((k) => CONFIG_KEYS.includes(k))) save()
     queueMicrotask(() => listeners.forEach((fn) => fn(changes, "local")))
   }
   const editEngine = (fn) => {

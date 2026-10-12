@@ -137,7 +137,8 @@ export class FakeScheduler implements Scheduler {
 }
 
 export class FakeClock {
-  constructor(public time = Date.UTC(2026, 9, 11, 12)) {}
+  /** Local noon: inside the default active hours whatever the machine's time zone. */
+  constructor(public time = new Date(2026, 9, 11, 12).getTime()) {}
   now = () => this.time
   advance(ms: number) {
     this.time += ms
@@ -154,6 +155,7 @@ export function fakeDeps() {
     scheduler: new FakeScheduler(),
     clock: new FakeClock(),
     random: () => 0,
+    wait: async (_ms: number) => {},
     ids: () => `id${++n}`,
   }
   return deps satisfies EngineDeps

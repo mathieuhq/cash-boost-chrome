@@ -1,4 +1,5 @@
 // Engine settings, bundled with the extension: fixing an X change means publishing a new version.
+import type { ActiveHours, Range } from "@super-x/domain"
 
 /** Comments sent to the Classifier per call. */
 export const MAX_CLASSIFY_BATCH = 25
@@ -36,9 +37,24 @@ interface Limits {
 export interface Config {
   thresholds: { accept: number; review: number }
   limits: { free: Limits; premium: Limits }
+  /** The rhythm of a person on X (ADR 0011): delays skewed short, bursts and breaks, nights off. */
   pacing: {
-    actionDelaySeconds: [number, number]
-    tickMinutes: [number, number]
+    /** Between two Leads, in seconds. */
+    actionDelaySeconds: Range
+    /** Between two Actions on the same Lead (like, then reply): the person is still on that comment. */
+    followUpDelaySeconds: Range
+    /** Before the first Action on Comments a scan just found: time to notice them. */
+    reactionSeconds: Range
+    /** Between two scans while the post gets new Comments. */
+    tickMinutes: Range
+    /** Between two scans once `quietTicks` scans in a row found nothing new. */
+    quietTickMinutes: Range
+    quietTicks: number
+    /** Actions done in one sitting before a break. */
+    burstActions: Range
+    breakMinutes: Range
+    /** Browser local time; nothing is scanned or sent outside. */
+    activeHours: ActiveHours
   }
   x: {
     /** GraphQL operation name → queryId. Missing ones are discovered from x.com's bundle. */
@@ -57,6 +73,16 @@ export interface Config {
 export const DEFAULT_CONFIG: Config = {
   thresholds: { accept: 0.8, review: 0.4 },
   limits: { free: { dm: 20, like: 30, reply: 100 }, premium: { dm: 60, like: 30, reply: 100 } },
-  pacing: { actionDelaySeconds: [30, 120], tickMinutes: [5, 15] },
+  pacing: {
+    actionDelaySeconds: [25, 240],
+    followUpDelaySeconds: [5, 25],
+    reactionSeconds: [20, 150],
+    tickMinutes: [5, 15],
+    quietTickMinutes: [20, 45],
+    quietTicks: 3,
+    burstActions: [5, 12],
+    breakMinutes: [8, 35],
+    activeHours: { start: 8, end: 21, jitterMinutes: 45 },
+  },
   x: { queryIds: {}, features: {}, dmMode: "xchat_ui", xchat: DEFAULT_XCHAT_SELECTORS },
 }

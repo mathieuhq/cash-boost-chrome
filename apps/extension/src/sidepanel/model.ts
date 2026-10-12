@@ -20,7 +20,6 @@ export interface CampaignView {
   id: string
   title: string
   tweetUrl: string
-  tweetText?: string
   keyword: string
   leadMagnetUrl: string
   status: CampaignStatus
@@ -78,6 +77,8 @@ export interface CircuitBreakerView {
 
 export interface TickView {
   phase: "idle" | "scanning" | "classifying" | "acting"
+  /** The engine waits on purpose: the account sleeps at night, or pauses between two bursts of Actions. */
+  rest?: { reason: "night" | "break"; until: number }
   pending: number
   nextAt: number
   lastDmAt?: number

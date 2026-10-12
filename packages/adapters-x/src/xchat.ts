@@ -57,21 +57,48 @@ export async function readConversation(s: XChatSelectors, history: number, timeo
 
 export type SendState = { state: "sent" } | { state: "no_send_button" } | { state: "unconfirmed" }
 
+/** How the message is typed, in milliseconds: like a person who reads first, types word by word, then checks. */
+export interface TypingPace {
+  /** Looking at the conversation before typing. */
+  readMs: [number, number]
+  /**
+   * Per word. Chrome fires the timers of a background tab about once a second, so in the dedicated tab
+   * each word in fact takes at least that long: a 40-word DM takes about a minute.
+   */
+  wordMs: [number, number]
+  /** Rereading before Send. */
+  beforeSendMs: [number, number]
+}
+
+export const DEFAULT_TYPING_PACE: TypingPace = { readMs: [1_500, 4_000], wordMs: [120, 380], beforeSendMs: [600, 1_800] }
+
 /**
- * Types `text` in the composer, clicks Send, and waits until X marks the new message as delivered.
- * Serialized into the page: must not reference anything outside itself.
+ * Types `text` in the composer word by word, clicks Send, and waits until X marks the new message as
+ * delivered. Serialized into the page: must not reference anything outside itself.
  */
-export async function sendMessage(s: XChatSelectors, text: string, timeoutMs: number): Promise<SendState> {
+export async function sendMessage(s: XChatSelectors, text: string, timeoutMs: number, pace: TypingPace): Promise<SendState> {
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+  const jitter = ([min, max]: [number, number]) => min + Math.random() * (max - min)
   const root = document.querySelector(s.root)?.shadowRoot
   const composer = root?.querySelector(s.composer) as HTMLTextAreaElement | null | undefined
   if (!root || !composer) return { state: "no_send_button" }
   const before = new Set(Array.from(root.querySelectorAll(s.message)))
 
+  await sleep(jitter(pace.readMs))
   composer.focus()
   // React tracks the value through the native setter: assigning `value` alone is ignored.
-  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(composer, text)
-  composer.dispatchEvent(new Event("input", { bubbles: true }))
+  const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!
+  const type = (value: string) => {
+    setValue.call(composer, value)
+    composer.dispatchEvent(new Event("input", { bubbles: true }))
+  }
+  let typed = ""
+  for (const word of text.match(/\S+\s*|\s+/g) ?? [text]) {
+    typed += word
+    type(typed)
+    await sleep(jitter(pace.wordMs))
+  }
+  if (composer.value !== text) type(text)
 
   let button: HTMLButtonElement | null = null
   for (let i = 0; i < 20 && !button; i++) {
@@ -79,6 +106,7 @@ export async function sendMessage(s: XChatSelectors, text: string, timeoutMs: nu
     button = root.querySelector(s.send) as HTMLButtonElement | null
   }
   if (!button || button.disabled) return { state: "no_send_button" }
+  await sleep(jitter(pace.beforeSendMs))
   button.click()
 
   const deadline = Date.now() + timeoutMs

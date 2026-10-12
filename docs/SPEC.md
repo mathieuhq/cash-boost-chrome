@@ -47,7 +47,8 @@ Max **3 campagnes actives**, quota de compte commun, file servie en round-robin.
 5. XChat illisible (code demandé, page changée) → rien n'est envoyé, toutes les campagnes en pause, message dans le side panel (« Déverrouille XChat »).
 
 ### Surveillance
-- Poll toutes les 5–15 min (aléatoire) via `chrome.alarms`, tant que Chrome est ouvert, pendant la durée choisie.
+- Poll toutes les 5–15 min (aléatoire) via `chrome.alarms`, tant que Chrome est ouvert, pendant la durée choisie ; toutes les 20–45 min après trois polls sans nouveau commentaire ; jamais la nuit (heures actives, ci-dessous).
+- Un nouveau commentaire n'est traité qu'après un délai de « remarque » (20 s à 2 min 30).
 - Chaque tick est idempotent ; état (curseurs, leads vus, file) persisté dans `chrome.storage.local`.
 
 ## Garde-fous anti-ban (non contournables)
@@ -58,7 +59,8 @@ Max **3 campagnes actives**, quota de compte commun, file servie en round-robin.
 | Likes / heure | 30 | 30 |
 | Réponses / jour | 100 | 100 |
 
-- Délai aléatoire 30–120 s entre deux actions ; type de compte détecté automatiquement.
+- Cadence humaine (ADR 0011) : un lead traité d'une traite (DM, like, réponse à 5–25 s d'écart), 25 s à 4 min entre deux leads (délais tirés vers le court), pause de 8–35 min après 5–12 actions, rien entre 21h et 8h (heure locale du navigateur, réveil décalé de 0–45 min chaque jour). Type de compte détecté automatiquement.
+- Dans XChat, le DM est tapé mot à mot après un temps de lecture, puis relu avant l'envoi ; le scan des commentaires marque une pause entre deux pages.
 - Au-delà du plafond : les leads attendent dans la file (visible dans le side panel).
 - Arrêt immédiat de toutes les campagnes sur 429 / code 88, 226, 326, 344/185, session expirée, XChat verrouillé ou méconnaissable ; arrêt d'urgence manuel.
 

@@ -4,17 +4,21 @@ import {
   campaignLinks,
   decide,
   hasQuota,
+  isAwake,
   isExpired,
   MAX_ACTIVE_CAMPAIGNS,
   MAX_TITLE_LENGTH,
   matchesKeyword,
   newLead,
+  nextStep,
+  nextWakeAt,
   normalizeLink,
   parseTweetUrl,
   pickNextAction,
   pickVariant,
   pruneHistory,
   renderTemplate,
+  skewedBetween,
   templatesAreValid,
   type Campaign,
   type Lead,
@@ -30,6 +34,8 @@ const SECOND = 1_000
 const MINUTE = 60 * SECOND
 const HOUR = 60 * MINUTE
 const MAX_TRANSIENT_ERRORS = 3
+/** Steps done on one Lead in a single sitting (DM, like, reply). */
+const MAX_CHAIN = 3
 /** An X restriction keeps the CircuitBreaker closed for at least this long. */
 const RESTRICTION_COOLDOWN = 24 * HOUR
 
@@ -267,12 +273,30 @@ export class Engine {
     const { clock, random, scheduler } = this.deps
     const now = clock.now()
     // Nothing running (nor stopped by the system): no X call, no next Tick until a launch or resume.
-    const running = await this.withState((s) => s.campaigns.some((c) => c.status === "active" || c.stoppedBy))
-    if (!running) return
+    const status = await this.withState((s) => ({
+      running: s.campaigns.some((c) => c.status === "active" || c.stoppedBy),
+      quiet: s.tick.quietTicks ?? 0,
+    }))
+    if (!status?.running) return
 
     const config = await this.deps.config.get()
-    const [minTick, maxTick] = config.pacing.tickMinutes
-    const nextTickAt = now + between(random, minTick, maxTick) * MINUTE
+    const { pacing } = config
+
+    // Night: a person does not check their post. Campaigns still end on time; the scan waits for the morning.
+    if (!isAwake(now, pacing.activeHours)) {
+      const wakeAt = nextWakeAt(now, pacing.activeHours, random)
+      await this.withState((s) => {
+        this.expire(s, now)
+        s.tick.nextTickAt = wakeAt
+        s.tick.rest = { reason: "night", until: wakeAt }
+      })
+      await scheduler.scheduleTick(wakeAt)
+      return
+    }
+
+    // A post that stopped getting Comments is looked at less often.
+    const cadence = status.quiet >= pacing.quietTicks ? pacing.quietTickMinutes : pacing.tickMinutes
+    const nextTickAt = now + between(random, cadence[0], cadence[1]) * MINUTE
     await scheduler.scheduleTick(nextTickAt)
 
     let account: XAccount | null = null
@@ -287,14 +311,9 @@ export class Engine {
     const plan = await this.withState((s) => {
       s.tick.lastTickAt = now
       s.tick.nextTickAt = nextTickAt
+      if (s.tick.rest?.reason === "night") delete s.tick.rest
       if (s.breaker?.reason === "session_expired") this.reset(s)
-
-      for (const campaign of s.campaigns) {
-        if (campaign.status !== "finished" && isExpired(campaign, now)) {
-          campaign.status = "finished"
-          delete campaign.stoppedBy
-        }
-      }
+      this.expire(s, now)
       if (s.breaker) return []
 
       const active = s.campaigns.filter((c) => c.status === "active")
@@ -386,7 +405,11 @@ export class Engine {
       found.push({ campaignId: campaign.id, leads, reviews, seen })
     }
 
+    // New Comments take a moment to be noticed: the first Action on them is never immediate.
+    const newLeads = found.some((f) => f.leads.length > 0)
+    const noticedAt = clock.now() + (newLeads ? skewedBetween(random, pacing.reactionSeconds) * SECOND : 0)
     const nextActionAt = await this.withState((s) => {
+      let fresh = 0
       for (const result of found) {
         const campaign = s.campaigns.find((c) => c.id === result.campaignId)
         if (!campaign) continue
@@ -395,46 +418,44 @@ export class Engine {
         s.reviews.push(...result.reviews)
         campaign.seenCommentIds.push(...result.seen)
         campaign.lastScanAt = now
+        fresh += result.seen.length
       }
+      s.tick.quietTicks = fresh > 0 ? 0 : (s.tick.quietTicks ?? 0) + 1
       s.tick.phase = "idle"
       s.tick.pending = 0
       if (s.breaker) return null
-      return Math.max(clock.now(), s.tick.nextActionAt ?? 0)
+      return Math.max(noticedAt, s.tick.nextActionAt ?? 0)
     })
     if (typeof nextActionAt === "number") await scheduler.scheduleAction(nextActionAt)
   }
 
-  // ── Act: execute one Action from the ActionQueue ─────────────────────────
+  // ── Act: handle the next Lead, one sitting at a time ─────────────────────
 
+  /**
+   * Takes the next Lead of the ActionQueue and does what a person would do on that comment in one go:
+   * DM, then like, then reply, a few seconds apart. Between two Leads the delay is skewed short; after a
+   * burst of Actions comes a break; at night nothing happens at all (ADR 0011).
+   */
   async act(): Promise<ActOutcome> {
-    const { clock, random, scheduler } = this.deps
+    const { clock, random, scheduler, wait } = this.deps
     const now = clock.now()
     const config = await this.deps.config.get()
+    const { pacing } = config
 
     const planned = await this.withState((s) => {
       if (s.breaker) return { type: "blocked" as const }
+      if (s.tick.rest && now >= s.tick.rest.until) delete s.tick.rest
       if (s.tick.nextActionAt && now < s.tick.nextActionAt) return { type: "wait" as const, at: s.tick.nextActionAt }
-      s.history = pruneHistory(s.history, now)
-      const limits = config.limits[s.account.tier]
-      const next = pickNextAction({
-        campaigns: s.campaigns,
-        leads: s.leads,
-        lastCampaignId: s.lastCampaignId,
-        allowed: (kind) =>
-          kind === "dm" && config.x.dmMode === "public_reply" ? true : hasQuota(kind, s.history, now, limits),
-      })
+      const next = this.pick(s, config, now)
       if (!next) return { type: "idle" as const }
-      const lead = s.leads.find((l) => l.id === next.leadId)!
-      const campaign = s.campaigns.find((c) => c.id === next.campaignId)!
-      s.tick.phase = "acting"
-      const delivered = next.step.kind === "dm" && this.alreadyDelivered(s, lead, campaign)
-      return {
-        type: "act" as const,
-        step: next.step,
-        lead: structuredClone(lead),
-        campaign: structuredClone(campaign),
-        delivered,
+      if (!isAwake(now, pacing.activeHours)) {
+        const wakeAt = nextWakeAt(now, pacing.activeHours, random)
+        s.tick.rest = { reason: "night", until: wakeAt }
+        s.tick.nextActionAt = wakeAt
+        return { type: "wait" as const, at: wakeAt }
       }
+      s.tick.phase = "acting"
+      return { type: "act" as const, ...next }
     })
     if (!planned || planned.type === "blocked") return "blocked"
     if (planned.type === "idle") return "idle"
@@ -443,24 +464,86 @@ export class Engine {
       return "waiting"
     }
 
-    const { step, lead, campaign, delivered } = planned
-    const outcome = delivered ? { kind: "dm_already_sent" as const } : await this.execute(step, lead, campaign, config)
-    if (outcome.kind === "error" && (await this.handleXError(outcome.error))) return "blocked"
+    let { step, lead, campaign, delivered } = planned
+    let steps = 0
+    for (;;) {
+      const outcome = delivered ? { kind: "dm_already_sent" as const } : await this.execute(step, lead, campaign, config)
+      if (outcome.kind === "error" && (await this.handleXError(outcome.error))) return "blocked"
+      steps++
 
-    const [minDelay, maxDelay] = config.pacing.actionDelaySeconds
-    const nextActionAt = clock.now() + between(random, minDelay, maxDelay) * SECOND
-    await this.withState((s) => {
-      const current = s.leads.find((l) => l.id === lead.id)
-      if (current) this.apply(s, current, step, outcome, now)
-      s.lastCampaignId = campaign.id
+      const at = clock.now()
+      const followUp = await this.withState((s) => {
+        const current = s.leads.find((l) => l.id === lead.id)
+        if (current) this.apply(s, current, step, outcome, at)
+        s.lastCampaignId = campaign.id
+        // Still on that comment: the next step on the same Lead follows in a few seconds.
+        if (!current || outcome.kind === "error" || steps >= MAX_CHAIN) return null
+        return this.pick(s, config, at, current)
+      })
+      if (!followUp) break
+      await wait(skewedBetween(random, pacing.followUpDelaySeconds) * SECOND)
+      ;({ step, lead, campaign, delivered } = followUp)
+    }
+
+    const nextActionAt = await this.withState((s) => {
+      const burst = (s.tick.burst ??= { done: 0, size: between(random, pacing.burstActions[0], pacing.burstActions[1]) })
+      burst.done += steps
+      let delay = skewedBetween(random, pacing.actionDelaySeconds) * SECOND
+      if (burst.done >= burst.size) {
+        delay = skewedBetween(random, pacing.breakMinutes) * MINUTE
+        s.tick.burst = { done: 0, size: between(random, pacing.burstActions[0], pacing.burstActions[1]) }
+        s.tick.rest = { reason: "break", until: clock.now() + delay }
+      }
       s.tick.phase = "idle"
-      s.tick.nextActionAt = nextActionAt
+      s.tick.nextActionAt = clock.now() + delay
+      return s.tick.nextActionAt
     })
-    await scheduler.scheduleAction(nextActionAt)
+    if (nextActionAt) await scheduler.scheduleAction(nextActionAt)
     return "done"
   }
 
   // ── Internals ─────────────────────────────────────────────────────────────
+
+  private allowed(s: EngineState, config: Config, now: number) {
+    const limits = config.limits[s.account.tier]
+    return (kind: Step["kind"]) =>
+      kind === "dm" && config.x.dmMode === "public_reply" ? true : hasQuota(kind, s.history, now, limits)
+  }
+
+  /**
+   * The next step to run, with a copy of its Lead and Campaign: for `lead`, the following step on that same
+   * Lead (its Campaign must still be active); otherwise the head of the ActionQueue.
+   */
+  private pick(s: EngineState, config: Config, now: number, lead?: Lead) {
+    s.history = pruneHistory(s.history, now)
+    const allowed = this.allowed(s, config, now)
+    let next: { leadId: string; campaignId: string; step: Step } | null
+    if (lead) {
+      const campaign = s.campaigns.find((c) => c.id === lead.campaignId)
+      const step = campaign?.status === "active" ? nextStep(lead, campaign.lastScanAt ?? 0) : null
+      next = step && allowed(step.kind) ? { leadId: lead.id, campaignId: lead.campaignId, step } : null
+    } else {
+      next = pickNextAction({ campaigns: s.campaigns, leads: s.leads, lastCampaignId: s.lastCampaignId, allowed })
+    }
+    if (!next) return null
+    const current = s.leads.find((l) => l.id === next.leadId)!
+    const campaign = s.campaigns.find((c) => c.id === next.campaignId)!
+    return {
+      step: next.step,
+      lead: structuredClone(current),
+      campaign: structuredClone(campaign),
+      delivered: next.step.kind === "dm" && this.alreadyDelivered(s, current, campaign),
+    }
+  }
+
+  private expire(s: EngineState, now: number) {
+    for (const campaign of s.campaigns) {
+      if (campaign.status !== "finished" && isExpired(campaign, now)) {
+        campaign.status = "finished"
+        delete campaign.stoppedBy
+      }
+    }
+  }
 
   private async execute(step: Step, lead: Lead, campaign: Campaign, config: Config): Promise<Outcome> {
     const { x, random } = this.deps

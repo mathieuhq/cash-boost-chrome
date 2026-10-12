@@ -7,7 +7,7 @@ import { Headline } from "~components/sx/headline"
 import { SectionHeader } from "~components/sx/section-header"
 import { notify } from "~components/sx/toast-pill"
 import { downloadCsv, leadsToCsv } from "~lib/csv"
-import { plural } from "~lib/format"
+import { clock, plural } from "~lib/format"
 
 import { MAX_ACTIVE_CAMPAIGNS, type PanelState } from "../model"
 import { errorMessage } from "../errors"
@@ -18,6 +18,12 @@ function blockedReason(state: PanelState, running: number): string | undefined {
   if (!state.tosAccepted) return "Accepte l'avertissement ci-dessus pour lancer une campagne."
   if (running >= MAX_ACTIVE_CAMPAIGNS) return "3 campagnes en cours au maximum : mets-en une en pause."
   return undefined
+}
+
+/** Why nothing happens right now, when the account rests like its owner would (ADR 0011). */
+function restSentence(rest: NonNullable<PanelState["tick"]["rest"]>): string {
+  const at = clock(rest.until)
+  return rest.reason === "night" ? `En veille pour la nuit · reprise vers ${at}` : `Petite pause · reprise à ${at}`
 }
 
 export const CampaignsView = forwardRef<HTMLTextAreaElement, { now: number }>(
@@ -61,6 +67,9 @@ export const CampaignsView = forwardRef<HTMLTextAreaElement, { now: number }>(
             action={<span className="text-mono text-muted-foreground">{current.length}/{MAX_ACTIVE_CAMPAIGNS}</span>}
           />
         </div>
+        {running > 0 && state.tick.rest && (
+          <p className="text-xs text-muted-foreground">{restSentence(state.tick.rest)}</p>
+        )}
         {current.map((campaign) => (
           <CampaignCard
             key={campaign.id}

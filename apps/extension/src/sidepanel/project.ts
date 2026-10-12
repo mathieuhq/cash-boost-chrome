@@ -41,7 +41,6 @@ export function project(state: EngineState, input: { config: Config; now: number
       id: c.id,
       title: campaignTitle(c),
       tweetUrl: c.sourceTweet.url,
-      ...(c.sourceTweet.text ? { tweetText: c.sourceTweet.text } : {}),
       keyword: c.keyword,
       leadMagnetUrl: c.leadMagnetUrl,
       status: c.status,
@@ -97,6 +96,7 @@ export function project(state: EngineState, input: { config: Config; now: number
       phase: state.tick.phase,
       pending: state.tick.pending || campaigns.reduce((sum, c) => sum + (c.status === "active" ? c.queued : 0), 0),
       nextAt: Math.max(now, state.tick.nextTickAt ?? now),
+      ...(state.tick.rest && state.tick.rest.until > now ? { rest: state.tick.rest } : {}),
       ...(state.tick.lastDmAt ? { lastDmAt: state.tick.lastDmAt } : {}),
     },
   }

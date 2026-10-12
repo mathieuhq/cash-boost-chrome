@@ -27,6 +27,7 @@ const engine = new Engine({
   scheduler,
   clock,
   random: Math.random,
+  wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   ids: () => crypto.randomUUID(),
 })
 

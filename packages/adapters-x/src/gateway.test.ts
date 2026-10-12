@@ -67,7 +67,7 @@ beforeEach(() => {
   }
   settings = structuredClone(DEFAULT_CONFIG)
   chat = new FakeChat()
-  gateway = new XWebGateway(runner, config, chat)
+  gateway = new XWebGateway(runner, config, chat, async () => {})
 })
 
 const op = (name: string) => (r: PageRequest) => r.path.endsWith(`/${name}`)

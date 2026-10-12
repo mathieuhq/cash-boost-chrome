@@ -54,6 +54,12 @@ export interface TickState {
   nextTickAt?: number
   nextActionAt?: number
   lastDmAt?: number
+  /** Why nothing happens right now, for the panel: the account sleeps, or pauses between two bursts. */
+  rest?: { reason: "night" | "break"; until: number }
+  /** Actions done in the current burst, and how many it holds (drawn at random each time). */
+  burst?: { done: number; size: number }
+  /** Scans in a row that found no new Comment: the scan cadence slows down. */
+  quietTicks?: number
 }
 
 /** Everything the engine knows about one X account, persisted in chrome.storage.local. */

@@ -64,6 +64,13 @@ describe("project", () => {
     expect(view.leads).toEqual([expect.objectContaining({ handle: "h9", campaign: "J'offre mon template Notion.", archived: true })])
   })
 
+  it("shows a rest only while it lasts", () => {
+    const state = emptyState({ id: "100", handle: "me", name: "Moi", tier: "free" })
+    state.tick.rest = { reason: "night", until: now + 60_000 }
+    expect(project(state, { config: DEFAULT_CONFIG, now }).tick.rest).toEqual({ reason: "night", until: now + 60_000 })
+    expect(project(state, { config: DEFAULT_CONFIG, now: now + 60_000 }).tick).not.toHaveProperty("rest")
+  })
+
   it("reads states saved before the archive existed", () => {
     const state = emptyState({ id: "100", handle: "me", name: "Moi", tier: "free" })
     delete state.archive
