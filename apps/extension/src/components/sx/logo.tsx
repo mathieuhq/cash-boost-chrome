@@ -1,6 +1,6 @@
 import { Gem } from "./gem"
 
-/** The Cash Boost mark: the "CB" monogram on the brand gem tile, as in docs/brand/cash-boost-icon.svg. */
+/** The Cash Boost mark: the "CB" monogram on the brand gem tile. */
 export function Logo({ className }: { className?: string }) {
   return <Gem size="sm" glyph={<Monogram />} className={className} />
 }

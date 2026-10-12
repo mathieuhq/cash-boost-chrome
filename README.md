@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/brand/cash-boost-logo.svg" alt="Cash Boost" height="56">
+  <img src="docs/brand/cash-boost-extension-icon.svg" alt="Cash Boost" height="72">
 </p>
 
 <p align="center">
