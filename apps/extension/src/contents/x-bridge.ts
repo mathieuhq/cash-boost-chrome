@@ -3,9 +3,9 @@ import { installBridge } from "@super-x/adapters-x/page"
 import type { PlasmoCSConfig } from "plasmo"
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://x.com/*"],
   world: "MAIN",
   run_at: "document_start",
+  matches: ["https://x.com/*"],
 }
 
 installBridge(window)

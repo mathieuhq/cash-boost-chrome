@@ -3,9 +3,11 @@ import {
   between,
   campaignLinks,
   decide,
+  effectiveLimits,
   hasQuota,
   isAwake,
   isExpired,
+  localDay,
   MAX_ACTIVE_CAMPAIGNS,
   MAX_TITLE_LENGTH,
   matchesKeyword,
@@ -15,15 +17,18 @@ import {
   normalizeLink,
   parseTweetUrl,
   pickNextAction,
-  pickVariant,
+  pickVariantIndex,
   pruneHistory,
+  rampFraction,
   renderTemplate,
   skewedBetween,
   templatesAreValid,
   type Campaign,
   type Lead,
   type MessageTemplates,
+  type QuotaLimits,
   type Step,
+  type TemplateFamily,
 } from "@super-x/domain"
 
 import { MAX_CLASSIFY_BATCH, type Config } from "./config"
@@ -221,21 +226,25 @@ export class Engine {
 
   async approveReview(reviewId: string): Promise<void> {
     const now = this.deps.clock.now()
+    const { volume } = await this.deps.config.get()
     const nextActionAt = await this.withState((s) => {
       const review = s.reviews.find((r) => r.id === reviewId)
       if (!review) return undefined
       s.reviews = s.reviews.filter((r) => r.id !== reviewId)
       if (!s.leads.some((l) => l.campaignId === review.campaignId && l.author.id === review.author.id)) {
         s.leads.push(
-          newLead({
-            id: this.deps.ids(),
-            campaignId: review.campaignId,
-            author: review.author,
-            comment: review.comment,
-            matchedBy: "manual",
-            probability: review.probability,
-            at: now,
-          })
+          this.withSkipAck(
+            newLead({
+              id: this.deps.ids(),
+              campaignId: review.campaignId,
+              author: review.author,
+              comment: review.comment,
+              matchedBy: "manual",
+              probability: review.probability,
+              at: now,
+            }),
+            volume.replyRate
+          )
         )
       }
       return Math.max(now, s.tick.nextActionAt ?? now)
@@ -355,7 +364,7 @@ export class Engine {
         if (matchesKeyword(reply.text, campaign.keyword)) {
           campaign.known.add(reply.author.id)
           seen.push(reply.id)
-          leads.push(this.lead(campaign.id, reply, "exact", now))
+          leads.push(this.lead(campaign.id, reply, "exact", now, config.volume.replyRate))
         } else {
           toClassify.push(reply)
         }
@@ -389,7 +398,7 @@ export class Engine {
           if (decision === "reject") continue
           campaign.known.add(reply.author.id)
           if (decision === "accept") {
-            leads.push(this.lead(campaign.id, reply, "classified", now, probability))
+            leads.push(this.lead(campaign.id, reply, "classified", now, config.volume.replyRate, probability))
           } else {
             reviews.push({
               id: this.deps.ids(),
@@ -464,10 +473,12 @@ export class Engine {
       return "waiting"
     }
 
-    let { step, lead, campaign, delivered } = planned
+    let { step, lead, campaign, delivered, lastVariants } = planned
     let steps = 0
     for (;;) {
-      const outcome = delivered ? { kind: "dm_already_sent" as const } : await this.execute(step, lead, campaign, config)
+      const { outcome, variant } = delivered
+        ? { outcome: { kind: "dm_already_sent" as const } }
+        : await this.execute(step, lead, campaign, config, lastVariants)
       if (outcome.kind === "error" && (await this.handleXError(outcome.error))) return "blocked"
       steps++
 
@@ -475,6 +486,7 @@ export class Engine {
       const followUp = await this.withState((s) => {
         const current = s.leads.find((l) => l.id === lead.id)
         if (current) this.apply(s, current, step, outcome, at)
+        if (variant && outcome.kind !== "error") (s.tick.lastVariants ??= {})[variant.family] = variant.index
         s.lastCampaignId = campaign.id
         // Still on that comment: the next step on the same Lead follows in a few seconds.
         if (!current || outcome.kind === "error" || steps >= MAX_CHAIN) return null
@@ -482,7 +494,7 @@ export class Engine {
       })
       if (!followUp) break
       await wait(skewedBetween(random, pacing.followUpDelaySeconds) * SECOND)
-      ;({ step, lead, campaign, delivered } = followUp)
+      ;({ step, lead, campaign, delivered, lastVariants } = followUp)
     }
 
     const nextActionAt = await this.withState((s) => {
@@ -504,10 +516,29 @@ export class Engine {
 
   // ── Internals ─────────────────────────────────────────────────────────────
 
+  /**
+   * Today's limits: the tier's, scaled down during the first days, and for DMs and replies by a target
+   * drawn once a day so the account does not stop on the same number every evening.
+   */
+  private limits(s: EngineState, config: Config, now: number): QuotaLimits {
+    const day = localDay(now)
+    if (s.tick.dailyTarget?.day !== day) {
+      const [min, max] = config.volume.dailyTarget
+      s.tick.dailyTarget = { day, factor: min + this.deps.random() * (max - min) }
+    }
+    const ramp = rampFraction(s.firstActionAt, now, config.volume.rampUp)
+    return effectiveLimits(config.limits[s.account.tier], ramp, s.tick.dailyTarget.factor)
+  }
+
   private allowed(s: EngineState, config: Config, now: number) {
-    const limits = config.limits[s.account.tier]
+    const limits = this.limits(s, config, now)
     return (kind: Step["kind"]) =>
       kind === "dm" && config.x.dmMode === "public_reply" ? true : hasQuota(kind, s.history, now, limits)
+  }
+
+  /** Most delivered Leads get the public "sent" reply; a person does not answer every single comment. */
+  private withSkipAck(lead: Lead, replyRate: number): Lead {
+    return this.deps.random() >= replyRate ? { ...lead, skipAck: true } : lead
   }
 
   /**
@@ -533,6 +564,7 @@ export class Engine {
       lead: structuredClone(current),
       campaign: structuredClone(campaign),
       delivered: next.step.kind === "dm" && this.alreadyDelivered(s, current, campaign),
+      lastVariants: { ...s.tick.lastVariants },
     }
   }
 
@@ -545,40 +577,53 @@ export class Engine {
     }
   }
 
-  private async execute(step: Step, lead: Lead, campaign: Campaign, config: Config): Promise<Outcome> {
+  private async execute(
+    step: Step,
+    lead: Lead,
+    campaign: Campaign,
+    config: Config,
+    lastVariants: Partial<Record<TemplateFamily, number>>
+  ): Promise<{ outcome: Outcome; variant?: { family: TemplateFamily; index: number } }> {
     const { x, random } = this.deps
     const to = lead.author
-    const delivery = () => `${renderTemplate(pickVariant(campaign.templates.dm, random), to)}\n${campaign.leadMagnetUrl}`
+    let variant: { family: TemplateFamily; index: number } | undefined
+    const text = (family: TemplateFamily) => {
+      const variants = campaign.templates[family]
+      const index = pickVariantIndex(variants, random, lastVariants[family])
+      variant = { family, index }
+      return renderTemplate(variants[index]!, to)
+    }
+    const delivery = () => `${text("dm")}\n${campaign.leadMagnetUrl}`
+    const done = (outcome: Outcome) => (variant ? { outcome, variant } : { outcome })
     try {
       switch (step.kind) {
         case "like":
           await x.like(lead.comment.id)
-          return { kind: "liked" }
+          return done({ kind: "liked" })
         case "dm": {
-          if (config.x.dmMode === "public_reply") return { kind: "dm_sent", viaReply: true }
+          if (config.x.dmMode === "public_reply") return done({ kind: "dm_sent", viaReply: true })
           // XChat says itself when DMs are closed; the legacy permission only matters for the legacy endpoint.
           const legacy = config.x.dmMode === "api"
           if (legacy || campaign.mustFollow) {
             const relationship = await x.relationship(to.id)
             if ((legacy && !relationship.canDm) || (campaign.mustFollow && !relationship.followsMe)) {
-              return { kind: "dm_closed" }
+              return done({ kind: "dm_closed" })
             }
           }
           const sent = await x.sendDm(to.id, delivery(), campaignLinks(campaign))
-          return sent === "already_sent" ? { kind: "dm_already_sent" } : { kind: "dm_sent", viaReply: false }
+          return done(sent === "already_sent" ? { kind: "dm_already_sent" } : { kind: "dm_sent", viaReply: false })
         }
         case "reply": {
           const viaReply = config.x.dmMode === "public_reply" && step.ack === "sent"
-          const family = step.ack === "sent" ? campaign.templates.ackSent : campaign.templates.ackDmClosed
-          await x.reply(lead.comment.id, viaReply ? delivery() : renderTemplate(pickVariant(family, random), to))
-          return { kind: "replied", ack: step.ack }
+          await x.reply(lead.comment.id, viaReply ? delivery() : text(step.ack === "sent" ? "ackSent" : "ackDmClosed"))
+          return done({ kind: "replied", ack: step.ack })
         }
       }
     } catch (error) {
-      if (!(error instanceof XError)) return { kind: "error", error: new XError("transient", "unknown", String(error)) }
-      if (error.kind === "dm_closed" && step.kind === "dm") return { kind: "dm_closed" }
-      if (error.kind === "not_found") return { kind: "gone", step }
-      return { kind: "error", error }
+      if (!(error instanceof XError)) return { outcome: { kind: "error", error: new XError("transient", "unknown", String(error)) } }
+      if (error.kind === "dm_closed" && step.kind === "dm") return { outcome: { kind: "dm_closed" } }
+      if (error.kind === "not_found") return { outcome: { kind: "gone", step } }
+      return { outcome: { kind: "error", error } }
     }
   }
 
@@ -596,6 +641,7 @@ export class Engine {
     switch (outcome.kind) {
       case "liked":
         lead.liked = true
+        s.firstActionAt ??= now
         s.history.push({ kind: "like", at: now })
         log("like")
         return
@@ -605,6 +651,7 @@ export class Engine {
         if (!outcome.viaReply) {
           lead.dmAttempts += 1
           lead.lastDmAttemptAt = now
+          s.firstActionAt ??= now
           s.history.push({ kind: "dm", at: now })
           s.tick.lastDmAt = now
           log("dm")
@@ -624,6 +671,7 @@ export class Engine {
         return
       case "replied":
         lead.ack = outcome.ack
+        s.firstActionAt ??= now
         s.history.push({ kind: "reply", at: now })
         log(outcome.ack === "sent" ? "reply_sent" : "reply_dm_closed")
         return
@@ -652,16 +700,26 @@ export class Engine {
     }
   }
 
-  private lead(campaignId: string, reply: Reply, matchedBy: "exact" | "classified", at: number, probability?: number): Lead {
-    return newLead({
+  private lead(
+    campaignId: string,
+    reply: Reply,
+    matchedBy: "exact" | "classified",
+    at: number,
+    replyRate: number,
+    probability?: number
+  ): Lead {
+    return this.withSkipAck(
+      newLead({
       id: this.deps.ids(),
       campaignId,
       author: reply.author,
       comment: { id: reply.id, text: reply.text },
-      matchedBy,
-      ...(probability === undefined ? {} : { probability }),
-      at,
-    })
+        matchedBy,
+        ...(probability === undefined ? {} : { probability }),
+        at,
+      }),
+      replyRate
+    )
   }
 
   /**

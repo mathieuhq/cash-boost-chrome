@@ -43,6 +43,37 @@ export function hasQuota(kind: ActionKind, history: readonly ActionRecord[], now
   return used(kind, history, now) < limits[kind]
 }
 
+/** The first days are gentler: limits rise from `startFraction` of their value to all of it over `days`. */
+export interface RampUp {
+  days: number
+  startFraction: number
+}
+
+/** Share of the limits allowed at `now`, given when the account's first Action went out. */
+export function rampFraction(firstActionAt: number | undefined, now: number, ramp: RampUp): number {
+  if (firstActionAt === undefined) return ramp.startFraction
+  const days = Math.max(0, now - firstActionAt) / DAY
+  return Math.min(1, ramp.startFraction + (1 - ramp.startFraction) * (days / ramp.days))
+}
+
+/** Day of the ramp, 1-based, for the panel. */
+export function rampDay(firstActionAt: number | undefined, now: number): number {
+  return firstActionAt === undefined ? 1 : Math.floor(Math.max(0, now - firstActionAt) / DAY) + 1
+}
+
+/**
+ * The limits actually enforced: the base ones scaled by the ramp, and the daily ones (DMs, replies) by the
+ * day's target so the account never stops on the same number every day. Never below 1.
+ */
+export function effectiveLimits(limits: QuotaLimits, ramp: number, dailyFactor: number): QuotaLimits {
+  const scale = (value: number, factor: number) => (value === 0 ? 0 : Math.max(1, Math.ceil(value * factor)))
+  return {
+    dm: scale(limits.dm, ramp * dailyFactor),
+    like: scale(limits.like, ramp),
+    reply: scale(limits.reply, ramp * dailyFactor),
+  }
+}
+
 export function pruneHistory(history: readonly ActionRecord[], now: number): ActionRecord[] {
   return history.filter((r) => r.at > now - DAY)
 }

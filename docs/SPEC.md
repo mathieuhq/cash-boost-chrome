@@ -41,8 +41,8 @@ Max **3 campagnes actives**, quota de compte commun, file servie en round-robin.
 ### Traitement d'un lead (ADR 0009)
 **Seule la présence du lien dans les DMs dit que le lead magnet a été envoyé** ; le like et la réponse ne comptent pas.
 1. Vérification : historique de l'extension (même personne, même lien, toutes campagnes), sinon les 10 derniers messages de la conversation XChat.
-2. Lien absent (et condition « doit me suivre » remplie) → DM avec le lead magnet → like → réponse publique « envoyé en DM ».
-3. Lien déjà présent → like → réponse publique « envoyé en DM », sans renvoyer le lien.
+2. Lien absent (et condition « doit me suivre » remplie) → DM avec le lead magnet → like → réponse publique « envoyé en DM » (sautée pour 30 % des leads, tirés au sort).
+3. Lien déjà présent → like → réponse publique « envoyé en DM » (même règle), sans renvoyer le lien.
 4. DMs fermés → like → réponse publique « ouvre tes DMs / suis-moi » → nouvel essai du DM à chaque cycle jusqu'à la fin de la campagne.
 5. XChat illisible (code demandé, page changée) → rien n'est envoyé, toutes les campagnes en pause, message dans le side panel (« Déverrouille XChat »).
 
@@ -61,6 +61,8 @@ Max **3 campagnes actives**, quota de compte commun, file servie en round-robin.
 
 - Cadence humaine (ADR 0011) : un lead traité d'une traite (DM, like, réponse à 5–25 s d'écart), 25 s à 4 min entre deux leads (délais tirés vers le court), pause de 8–35 min après 5–12 actions, rien entre 21h et 8h (heure locale du navigateur, réveil décalé de 0–45 min chaque jour). Type de compte détecté automatiquement.
 - Dans XChat, le DM est tapé mot à mot après un temps de lecture, puis relu avant l'envoi ; le scan des commentaires marque une pause entre deux pages.
+- Montée en charge : les plafonds valent 40 % le premier jour d'activité et atteignent 100 % au septième. Chaque jour, les plafonds de DMs et de réponses sont ramenés à 70–100 % de leur valeur (tirage quotidien). Les quotas affichés dans Options sont ceux appliqués.
+- Variété : jamais deux fois la même variante de message à la suite ; 30 % des leads livrés ne reçoivent pas de réponse publique « envoyé en DM » (la réponse « ouvre tes DMs » est toujours envoyée).
 - Au-delà du plafond : les leads attendent dans la file (visible dans le side panel).
 - Arrêt immédiat de toutes les campagnes sur 429 / code 88, 226, 326, 344/185, session expirée, XChat verrouillé ou méconnaissable ; arrêt d'urgence manuel.
 

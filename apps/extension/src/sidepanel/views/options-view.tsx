@@ -16,9 +16,8 @@ const FULL = "Plafond atteint : les leads attendent dans la file."
 export function OptionsView() {
   const { state, send } = useEngine()
   const { defaults } = usePanel()
-  const { dms, likes, replies } = state.quotas
+  const { dms, likes, replies, rampUp } = state.quotas
 
-  // Saved on every change; only new Campaigns use them.
   const update = (patch: Partial<CampaignDefaults>) => send({ type: "setCampaignDefaults", defaults: { ...defaults, ...patch } })
 
   return (
@@ -62,6 +61,12 @@ export function OptionsView() {
         <SectionHeader title="Quotas du compte X" />
       </div>
       <Card>
+        {rampUp && (
+          <CardDescription className="text-xs">
+            Montée en charge : jour {rampUp.day}/{rampUp.days}. Les plafonds sont réduits les premiers jours, puis varient un peu
+            d'un jour à l'autre.
+          </CardDescription>
+        )}
         <QuotaMeter label="Nouveaux DMs" period="jour" {...dms} note={dms.used >= dms.limit ? FULL : undefined} />
         <QuotaMeter label="Likes" period="heure" {...likes} note={likes.used >= likes.limit ? FULL : undefined} />
         <QuotaMeter label="Réponses" period="jour" {...replies} note={replies.used >= replies.limit ? FULL : undefined} />

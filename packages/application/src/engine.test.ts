@@ -438,6 +438,61 @@ describe("act: processing Leads", () => {
     expect(ctx.deps.x.calls.slice(0, 3)).toEqual([expect.stringMatching(/^dm 3 /), "like b1", expect.stringMatching(/^reply b1 /)])
   })
 
+  it("never uses the same message variant twice in a row", async () => {
+    const ctx = await withCampaign()
+    for (const id of ["1", "2", "3"]) ctx.deps.x.addReply(TWEET.id, { id: `r${id}`, text: "GUIDE", author: author(id) })
+    await ctx.engine.tick()
+    await drain(ctx)
+    const dms = ctx.deps.x.calls.filter((c) => c.startsWith("dm ")).map((c) => c.split("\n")[0]!.replace(/^dm \d /, ""))
+    expect(dms).toEqual(["Salut User !", "Hello User", "Salut User !"])
+    const replies = ctx.deps.x.calls.filter((c) => c.startsWith("reply ")).map((c) => c.replace(/^reply r\d /, ""))
+    expect(replies).toEqual(["C'est envoyé en DM @user1", "Regarde tes DMs @user2", "C'est envoyé en DM @user3"])
+  })
+
+  it("skips the public reply on some delivered Leads, never the 'open your DMs' one", async () => {
+    const ctx = await withCampaign()
+    ctx.deps.config.config.volume.replyRate = 0
+    ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "GUIDE", author: author("1") })
+    ctx.deps.x.addReply(TWEET.id, { id: "r2", text: "GUIDE", author: author("2") })
+    ctx.deps.x.closedDms.add("2")
+    await ctx.engine.tick()
+    await drain(ctx)
+    expect(ctx.deps.x.calls).toEqual([expect.stringMatching(/^dm 1 /), "like r1", "like r2", "reply r2 Ouvre tes DMs @user2"])
+    expect(ctx.deps.store.state.leads[0]).toMatchObject({ delivery: "sent", ack: "none", skipAck: true })
+  })
+
+  it("ramps the limits up over the first week: 40 % of them on day one", async () => {
+    const ctx = await withCampaign({ durationHours: 24 * 30 })
+    // Free tier: 20 DMs a day × 0.4 (ramp) × 0.7 (smallest daily target) → 6.
+    for (let i = 1; i <= 7; i++) ctx.deps.x.addReply(TWEET.id, { id: `r${i}`, text: "GUIDE", author: author(String(i)) })
+    await ctx.engine.tick()
+    await drain(ctx, 100)
+    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toHaveLength(6)
+    expect(ctx.deps.store.state.firstActionAt).toBeDefined()
+
+    ctx.deps.clock.advance(8 * 24 * HOUR)
+    await ctx.engine.tick()
+    await drain(ctx, 100)
+    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toHaveLength(7)
+  })
+
+  it("draws today's target once a day", async () => {
+    const ctx = await withCampaign()
+    ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "GUIDE", author: author("1") })
+    await ctx.engine.tick()
+    await ctx.engine.act()
+    const target = ctx.deps.store.state.tick.dailyTarget!
+    expect(target.factor).toBe(0.7)
+    ctx.deps.random = () => 0.999
+    ctx.deps.clock.advance(HOUR)
+    await ctx.engine.act()
+    expect(ctx.deps.store.state.tick.dailyTarget).toEqual(target)
+    ctx.deps.clock.advance(24 * HOUR)
+    await ctx.engine.act()
+    expect(ctx.deps.store.state.tick.dailyTarget!.day).not.toBe(target.day)
+    expect(ctx.deps.store.state.tick.dailyTarget!.factor).toBeCloseTo(1, 2)
+  })
+
   it("moves on to the next Lead when a step hits a Quota mid-sitting", async () => {
     const ctx = await withCampaign()
     ctx.deps.config.config.limits.free.reply = 0

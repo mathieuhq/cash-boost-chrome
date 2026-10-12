@@ -1,5 +1,5 @@
 // Engine settings, bundled with the extension: fixing an X change means publishing a new version.
-import type { ActiveHours, Range } from "@super-x/domain"
+import type { ActiveHours, RampUp, Range } from "@super-x/domain"
 
 /** Comments sent to the Classifier per call. */
 export const MAX_CLASSIFY_BATCH = 25
@@ -56,6 +56,14 @@ export interface Config {
     /** Browser local time; nothing is scanned or sent outside. */
     activeHours: ActiveHours
   }
+  /** How much the account does (ADR 0011): gentle first days, a daily target that moves, not every comment answered. */
+  volume: {
+    rampUp: RampUp
+    /** Share of the daily limits (DMs, replies) aimed at today, drawn once a day. */
+    dailyTarget: Range
+    /** Share of the delivered Leads that get the public "sent" reply. */
+    replyRate: number
+  }
   x: {
     /** GraphQL operation name → queryId. Missing ones are discovered from x.com's bundle. */
     queryIds: Record<string, string>
@@ -84,5 +92,6 @@ export const DEFAULT_CONFIG: Config = {
     breakMinutes: [8, 35],
     activeHours: { start: 8, end: 21, jitterMinutes: 45 },
   },
+  volume: { rampUp: { days: 7, startFraction: 0.4 }, dailyTarget: [0.7, 1], replyRate: 0.7 },
   x: { queryIds: {}, features: {}, dmMode: "xchat_ui", xchat: DEFAULT_XCHAT_SELECTORS },
 }

@@ -1,4 +1,4 @@
-import type { ActionRecord, Campaign, Lead, XUser } from "@super-x/domain"
+import type { ActionRecord, Campaign, Lead, TemplateFamily, XUser } from "@super-x/domain"
 
 import type { XAccount } from "./ports"
 
@@ -60,6 +60,10 @@ export interface TickState {
   burst?: { done: number; size: number }
   /** Scans in a row that found no new Comment: the scan cadence slows down. */
   quietTicks?: number
+  /** Share of the daily limits aimed at today (local day), drawn once a day. */
+  dailyTarget?: { day: number; factor: number }
+  /** Index of the variant used last in each family: never the same one twice in a row. */
+  lastVariants?: Partial<Record<TemplateFamily, number>>
 }
 
 /** Everything the engine knows about one X account, persisted in chrome.storage.local. */
@@ -76,6 +80,8 @@ export interface EngineState {
   /** Absent in states saved before deletions were archived. */
   archive?: ArchivedCampaign[]
   lastCampaignId?: string
+  /** When the account's first Action went out: the limits ramp up from there. */
+  firstActionAt?: number
   tick: TickState
 }
 

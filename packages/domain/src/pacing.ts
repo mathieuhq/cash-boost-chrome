@@ -39,3 +39,9 @@ export function nextWakeAt(at: number, hours: ActiveHours, random: Random): numb
   if (wake.getTime() <= at) wake.setDate(wake.getDate() + 1)
   return wake.getTime() + between(random, 0, hours.jitterMinutes) * 60_000
 }
+
+/** The local calendar day of `at`, as a sortable number (20261012): one daily target per day. */
+export function localDay(at: number): number {
+  const date = new Date(at)
+  return date.getFullYear() * 10_000 + (date.getMonth() + 1) * 100 + date.getDate()
+}

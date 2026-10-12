@@ -32,6 +32,8 @@ export interface Lead {
   deliveredAt?: number
   /** The lead magnet link was already in the DMs: nothing was sent, the like and reply still happen. */
   alreadySent?: boolean
+  /** Drawn at creation: a person does not answer every comment, this one gets no public "sent" reply. */
+  skipAck?: true
   /** Consecutive transient errors on the current step; 3 → failed. */
   errors?: number
   failure?: string
@@ -64,7 +66,7 @@ export function newLead(input: {
 }
 
 /**
- * DM first (the DMs are checked before anything public happens) → like → public reply "sent".
+ * DM first (the DMs are checked before anything public happens) → like → public reply "sent" (unless skipped).
  * If DMs are closed: like, reply "dm_closed" once, then retry the DM at most once per Tick
  * (after `lastScanAt`) until the Campaign ends.
  */
@@ -74,7 +76,7 @@ export function nextStep(lead: Lead, lastScanAt: number): Step | null {
   if (!lead.liked) return { kind: "like" }
   switch (lead.delivery) {
     case "sent":
-      return lead.ack === "none" ? { kind: "reply", ack: "sent" } : null
+      return lead.ack === "none" && !lead.skipAck ? { kind: "reply", ack: "sent" } : null
     case "dm_closed":
       if (lead.ack === "none") return { kind: "reply", ack: "dm_closed" }
       return (lead.lastDmAttemptAt ?? 0) < lastScanAt ? { kind: "dm" } : null

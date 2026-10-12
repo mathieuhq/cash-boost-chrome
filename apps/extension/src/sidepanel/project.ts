@@ -1,5 +1,5 @@
 import type { ActivityEntry, ActivityKind, Config, EngineState } from "@super-x/application"
-import { pendingCount, quotaUsage, type Campaign, type Lead } from "@super-x/domain"
+import { effectiveLimits, pendingCount, quotaUsage, rampDay, rampFraction, type Campaign, type Lead } from "@super-x/domain"
 
 import { clock } from "~lib/format"
 
@@ -54,7 +54,10 @@ export function project(state: EngineState, input: { config: Config; now: number
   })
 
   const titles = new Map(campaigns.map((c) => [c.id, c.title]))
-  const usage = quotaUsage(state.history, now, config.limits[state.account.tier])
+  // The limits the engine enforces today (ADR 0011), not the tier's ceiling.
+  const ramp = rampFraction(state.firstActionAt, now, config.volume.rampUp)
+  const limits = effectiveLimits(config.limits[state.account.tier], ramp, state.tick.dailyTarget?.factor ?? 1)
+  const usage = quotaUsage(state.history, now, limits)
 
   return {
     account: {
@@ -91,7 +94,13 @@ export function project(state: EngineState, input: { config: Config; now: number
         status: l.delivery,
         at: leadAt(l),
       })),
-    quotas: { tier: state.account.tier, dms: usage.dm, likes: usage.like, replies: usage.reply },
+    quotas: {
+      tier: state.account.tier,
+      dms: usage.dm,
+      likes: usage.like,
+      replies: usage.reply,
+      ...(ramp < 1 ? { rampUp: { day: rampDay(state.firstActionAt, now), days: config.volume.rampUp.days } } : {}),
+    },
     tick: {
       phase: state.tick.phase,
       pending: state.tick.pending || campaigns.reduce((sum, c) => sum + (c.status === "active" ? c.queued : 0), 0),

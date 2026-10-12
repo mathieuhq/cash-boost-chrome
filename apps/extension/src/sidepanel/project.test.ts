@@ -51,7 +51,9 @@ describe("project", () => {
 
     const view = project(state, { config: DEFAULT_CONFIG, now })
     expect(view.campaigns[0]).toMatchObject({ leads: 2, sent: 1, queued: 1, log: [{ label: "DM envoyé · @h1", state: "done" }] })
-    expect(view.quotas.dms).toEqual({ used: 1, limit: 20 })
+    // Day one of the ramp-up: 40 % of the 20 DMs.
+    expect(view.quotas.dms).toEqual({ used: 1, limit: 8 })
+    expect(view.quotas.rampUp).toEqual({ day: 1, days: 7 })
     expect(view.leads.map((l) => l.status)).toEqual(["sent", "queued"])
   })
 
@@ -62,6 +64,16 @@ describe("project", () => {
     const view = project(state, { config: DEFAULT_CONFIG, now })
     expect(view.campaigns).toEqual([])
     expect(view.leads).toEqual([expect.objectContaining({ handle: "h9", campaign: "J'offre mon template Notion.", archived: true })])
+  })
+
+  it("shows the tier's full limits once the ramp-up is over, scaled by the day's target", () => {
+    const state = emptyState({ id: "100", handle: "me", name: "Moi", tier: "free" })
+    state.firstActionAt = now - 10 * 24 * 3_600_000
+    state.tick.dailyTarget = { day: 20261011, factor: 0.8 }
+    const view = project(state, { config: DEFAULT_CONFIG, now })
+    expect(view.quotas.dms).toEqual({ used: 0, limit: 16 })
+    expect(view.quotas.likes).toEqual({ used: 0, limit: 30 })
+    expect(view.quotas).not.toHaveProperty("rampUp")
   })
 
   it("shows a rest only while it lasts", () => {

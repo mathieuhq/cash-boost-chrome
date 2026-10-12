@@ -66,6 +66,8 @@ export interface Quotas {
   dms: QuotaView
   likes: QuotaView
   replies: QuotaView
+  /** The first days run on reduced limits; absent once the account is at full speed. */
+  rampUp?: { day: number; days: number }
 }
 
 export interface CircuitBreakerView {

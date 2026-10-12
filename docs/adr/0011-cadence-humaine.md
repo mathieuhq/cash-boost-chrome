@@ -19,8 +19,16 @@ Les constantes vivent dans `DEFAULT_CONFIG.pacing` (ADR 0010) ; les fonctions pu
 - **XChat.** Lecture de 1,5–4 s avant de taper, saisie mot à mot (120–380 ms par mot ; dans l'onglet en arrière-plan Chrome espace les minuteurs d'environ 1 s, un DM de 40 mots prend donc près d'une minute), relecture de 0,6–1,8 s avant Envoyer. Le scan des réponses marque 0,7–2,2 s entre deux pages.
 - Le side panel dit pourquoi rien ne se passe : « En veille pour la nuit · reprise vers 08:12 », « Petite pause · reprise à 14:35 ».
 
+Volume (`DEFAULT_CONFIG.volume`, ajouté le même jour) :
+
+- **Montée en charge.** Les plafonds valent 40 % de leur valeur le jour de la première Action du compte dans l'extension, et montent linéairement jusqu'à 100 % au septième jour (`firstActionAt` dans l'état, `rampFraction`). Une pause de plusieurs semaines ne relance pas la rampe. Options affiche « Montée en charge : jour 3/7 ».
+- **Cible du jour.** Les plafonds journaliers (DMs, réponses) sont multipliés par un facteur tiré une fois par jour local entre 0,7 et 1 (`tick.dailyTarget`) : le compte ne s'arrête pas sur le même chiffre chaque soir. Les likes par heure ne bougent pas. Les quotas affichés sont ceux réellement appliqués.
+- **Pas de réponse à tout le monde.** 70 % des Leads livrés reçoivent la réponse publique « envoyé en DM » (`replyRate`, tiré à la création du Lead, `skipAck`). La réponse « ouvre tes DMs » part toujours : la personne doit agir.
+- **Jamais deux fois la même variante.** Dans chaque famille de MessageTemplate, la variante utilisée la fois précédente est exclue du tirage (`tick.lastVariants`).
+
 ## Conséquences
-- Débit plus faible et moins régulier ; les plafonds de l'ADR 0009 restent le maximum, ils ne sont plus un objectif atteint chaque jour à la même heure.
+- Débit plus faible et moins régulier ; les plafonds de la SPEC restent le maximum, atteint au mieux après une semaine et jamais deux jours de suite sur le même chiffre.
+- Environ 30 % des Leads livrés n'ont pas de réponse publique : ils ont le lien en DM, le like, et c'est tout.
 - Les heures actives suivent l'horloge de la machine : un utilisateur qui poste à 1h du matin devra attendre 8h. Les exposer dans Options est le prochain pas si le besoin se présente.
 - Les chaînes par Lead gardent le service worker occupé jusqu'à une minute (DM XChat compris). Les attentes intermédiaires restent sous 30 s, la limite d'inactivité de MV3 ; les appels `chrome.scripting` qui suivent la relancent.
 - Les délais courts entre deux étapes passent par `setTimeout` et non par `chrome.alarms`, dont la granularité minimale (30 s) les aurait écrasés.

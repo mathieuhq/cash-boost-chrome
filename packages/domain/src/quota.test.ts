@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { DEFAULT_LIMITS, hasQuota, pruneHistory, quotaUsage, type ActionRecord } from "./quota"
+import { DEFAULT_LIMITS, effectiveLimits, hasQuota, pruneHistory, quotaUsage, rampDay, rampFraction, type ActionRecord } from "./quota"
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -34,5 +34,25 @@ describe("quotas (SPEC: anti-ban guards)", () => {
   it("prunes records older than a day", () => {
     const history = [...records("dm", 1, 25 * HOUR), ...records("dm", 1, 2 * HOUR)]
     expect(pruneHistory(history, now)).toHaveLength(1)
+  })
+})
+
+describe("ramp-up and daily target", () => {
+  const ramp = { days: 7, startFraction: 0.4 }
+
+  it("starts at the start fraction and reaches the full limits after the ramp", () => {
+    expect(rampFraction(undefined, now, ramp)).toBe(0.4)
+    expect(rampFraction(now, now, ramp)).toBe(0.4)
+    expect(rampFraction(now - 3.5 * 24 * HOUR, now, ramp)).toBeCloseTo(0.7)
+    expect(rampFraction(now - 7 * 24 * HOUR, now, ramp)).toBe(1)
+    expect(rampFraction(now - 30 * 24 * HOUR, now, ramp)).toBe(1)
+    expect(rampDay(undefined, now)).toBe(1)
+    expect(rampDay(now - 2.5 * 24 * HOUR, now)).toBe(3)
+  })
+
+  it("scales the daily limits by the ramp and the day's target, likes by the ramp only, never below 1", () => {
+    expect(effectiveLimits(DEFAULT_LIMITS.free, 0.4, 0.7)).toEqual({ dm: 6, like: 12, reply: 28 })
+    expect(effectiveLimits(DEFAULT_LIMITS.free, 1, 1)).toEqual(DEFAULT_LIMITS.free)
+    expect(effectiveLimits({ dm: 1, like: 1, reply: 0 }, 0.4, 0.7)).toEqual({ dm: 1, like: 1, reply: 0 })
   })
 })

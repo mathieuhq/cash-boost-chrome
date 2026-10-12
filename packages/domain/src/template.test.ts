@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { firstName, pickVariant, renderTemplate } from "./template"
+import { firstName, pickVariant, pickVariantIndex, renderTemplate } from "./template"
 
 describe("firstName", () => {
   it("takes the first word of the display name", () => {
@@ -32,5 +32,16 @@ describe("pickVariant", () => {
   it("uses the random source to choose", () => {
     expect(pickVariant(["a", "b", "c"], () => 0.99)).toBe("c")
     expect(pickVariant(["a", "b", "c"], () => 0)).toBe("a")
+  })
+})
+
+describe("pickVariantIndex", () => {
+  it("never repeats the variant used last time", () => {
+    const variants = ["a", "b", "c"]
+    expect(pickVariantIndex(variants, () => 0)).toBe(0)
+    expect(pickVariantIndex(variants, () => 0, 0)).toBe(1)
+    expect(pickVariantIndex(variants, () => 0.99, 2)).toBe(1)
+    expect(pickVariantIndex(variants, () => 0.5, 1)).toBe(2)
+    expect(pickVariantIndex(["only"], () => 0.5, 0)).toBe(0)
   })
 })
