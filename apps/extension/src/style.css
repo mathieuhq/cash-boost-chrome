@@ -1,0 +1,434 @@
+/* Scan src/ only: build/ and .plasmo/ would retrigger the watcher on every Plasmo rebuild. */
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@source "./";
+@source not "./style.generated.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Cash Boost design system — tokens synced with the "Cash Boost" DS artifact (tokens.json v3, shadcn.md). */
+
+:root {
+  --radius: 0.625rem;
+  --background: #f7f7f7;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: #f5f5f5;
+  --secondary-foreground: #171717;
+  --muted: #f5f5f5;
+  --muted-foreground: #6b6b6b;
+  --accent: #f5f5f5;
+  --accent-foreground: #171717;
+  --border: #e5e5e5;
+  --input: #8f8f8f;
+  --ring: #0a0a0a;
+  --brand: #0a0a0a;
+  --brand-foreground: #fafafa;
+  --brand-soft: #f0f0f0;
+  --brand-ink: #0a0a0a;
+  --brand-light: #525252;
+  --brand-deep: #000000;
+  --brand-glow: rgba(0, 0, 0, 0.18);
+  --stripes-ink: #00000008;
+  --success: #047857;
+  --success-soft: #ecfdf5;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fef2f2;
+  --elevation-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --elevation-button: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --elevation-card: 0 0 0 1px rgba(10, 10, 10, 0.1), 0 12px 34px -20px rgba(0, 0, 0, 0.7);
+  --elevation-toast: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --elevation-glow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: var(--card);
+  --popover-foreground: var(--card-foreground);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a1a1a1;
+  --accent: #262626;
+  --accent-foreground: #fafafa;
+  --border: #ffffff1a;
+  --input: #6b6b6b;
+  --ring: #fafafa;
+  --brand: #fafafa;
+  --brand-foreground: #0a0a0a;
+  --brand-soft: #262626;
+  --brand-ink: #fafafa;
+  --brand-light: #ffffff;
+  --brand-deep: #a1a1a1;
+  --brand-glow: rgba(255, 255, 255, 0.16);
+  --stripes-ink: #ffffff06;
+  --success: #34d399;
+  --success-soft: #052e22;
+  --warning: #fbbf24;
+  --warning-soft: #33260a;
+  --destructive: #ff6467;
+  --destructive-foreground: #171717;
+  --destructive-soft: #3b0d0e;
+  --elevation-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --elevation-button: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elevation-card: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 34px -20px rgba(0, 0, 0, 0.9);
+  --elevation-toast: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --elevation-glow: 0 8px 24px rgba(255, 255, 255, 0.12);
+}
+
+@theme inline {
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-button: var(--elevation-button);
+  --shadow-card: var(--elevation-card);
+  --shadow-toast: var(--elevation-toast);
+  --shadow-glow: var(--elevation-glow);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-light: var(--brand-light);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-glow: var(--brand-glow);
+  --color-stripes-ink: var(--stripes-ink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    scrollbar-width: none;
+  }
+  /* Scrolling stays, the bar goes: the side panel is too narrow to spare it. */
+  *::-webkit-scrollbar {
+    display: none;
+  }
+  html {
+    @apply bg-background;
+  }
+  /* 14/20 body text on the body only: html stays at 16px so rem keeps Tailwind's 4px grid. */
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    margin: 0;
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+
+/* Text styles from tokens.json (type.groups). */
+@utility text-display {
+  font-size: 30px;
+  line-height: 32px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+/* One-line display: shrinks with the panel width so the longest Headline (~15 em wide) fits from 320px. */
+@utility text-display-fit {
+  font-size: clamp(18px, calc(6.45vw - 2px), 30px);
+  line-height: 1.1;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+@utility text-heading {
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+@utility text-metric {
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+@utility text-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Rerun effects (copied from the DS bundle.css; all stop under reduced motion) ── */
+
+@property --sx-beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes sx-shimmer {
+  0% { background-position: 100% center, 0 0; }
+  100% { background-position: 0% center, 0 0; }
+}
+@keyframes sx-beam {
+  to { --sx-beam-angle: 360deg; }
+}
+@keyframes sx-ping {
+  0% { opacity: 0.6; transform: scale(1); }
+  70%, 100% { opacity: 0; transform: scale(2.2); }
+}
+@keyframes sx-toast-in {
+  0% { opacity: 0; transform: translateY(6px) scale(0.92); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes sx-halo {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Shimmer text — Rerun's "Thinking…" */
+.sx-shimmer {
+  --sx-spread: 24px;
+  color: transparent;
+  background-image:
+    linear-gradient(90deg, transparent calc(50% - var(--sx-spread)), var(--foreground), transparent calc(50% + var(--sx-spread))),
+    linear-gradient(var(--muted-foreground), var(--muted-foreground));
+  background-size: 250% 100%, auto;
+  background-repeat: no-repeat, padding-box;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: sx-shimmer 2.2s linear infinite;
+}
+.sx-shimmer-brand {
+  background-image:
+    linear-gradient(90deg, transparent calc(50% - var(--sx-spread)), var(--brand-light), transparent calc(50% + var(--sx-spread))),
+    linear-gradient(var(--brand-ink), var(--brand-ink));
+}
+
+/* Beam — a light arc running around a pill's edge */
+.sx-beam {
+  position: relative;
+  isolation: isolate;
+}
+.sx-beam::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--sx-beam-angle),
+    transparent 0%,
+    color-mix(in oklab, var(--brand) 25%, transparent) 10%,
+    var(--brand) 18%,
+    transparent 30%,
+    transparent 50%,
+    color-mix(in oklab, var(--brand) 25%, transparent) 60%,
+    var(--brand) 68%,
+    transparent 80%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: sx-beam 3.2s linear infinite;
+}
+
+/* Ping dot */
+.sx-ping {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--brand);
+}
+.sx-ping::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--brand);
+  animation: sx-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Stripes — Rerun's 45° hatch */
+.sx-stripes {
+  background-image: repeating-linear-gradient(-45deg, var(--stripes-ink) 0 1px, transparent 1px 8px);
+}
+
+/* Halo — soft radial light under the active thing */
+.sx-halo {
+  position: absolute;
+  pointer-events: none;
+  background: radial-gradient(
+    62% 100% at 50% 100%,
+    var(--brand-glow),
+    color-mix(in oklab, var(--brand-glow) 27%, transparent) 45%,
+    transparent 78%
+  );
+}
+.sx-nav-halo {
+  inset: auto 0 0 0;
+  height: 75%;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+[aria-selected="true"] > .sx-nav-halo {
+  opacity: 1;
+  animation: sx-halo 3s ease-in-out infinite;
+}
+
+/* Gradient text — second line of the Headline, live metrics */
+.sx-gradient-text {
+  color: transparent;
+  background-image: radial-gradient(at 50% -80%, var(--brand-light) 5%, var(--brand) 50%, var(--brand-deep) 140%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Gem — the glossy brand tile */
+.sx-gem {
+  --gem-size: 36px;
+  --gem-radius: calc(var(--gem-size) * 0.3);
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  width: var(--gem-size);
+  height: var(--gem-size);
+  flex: none;
+  transform: rotate(-4deg);
+}
+.sx-gem-sm { --gem-size: 28px; }
+.sx-gem-lg { --gem-size: 56px; }
+.sx-gem::after {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  z-index: -2;
+  border-radius: var(--gem-radius);
+  background: var(--brand);
+  opacity: 0.28;
+  filter: blur(calc(var(--gem-size) * 0.22));
+}
+.sx-gem-slab,
+.sx-gem-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--gem-radius);
+}
+.sx-gem-slab {
+  z-index: -1;
+  translate: -6% 8%;
+  background: linear-gradient(160deg, var(--brand-light) 0%, var(--brand) 100%);
+  box-shadow: inset 0 0 2px color-mix(in oklab, var(--brand) 35%, transparent), var(--elevation-glow);
+}
+.sx-gem-face {
+  background:
+    radial-gradient(80% 60% at 28% 18%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.14) 40%, transparent 68%),
+    linear-gradient(150deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-deep) 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.55),
+    inset 1px 0 2px rgba(255, 255, 255, 0.35),
+    inset -1px -2px 6px color-mix(in oklab, var(--brand-deep) 60%, transparent);
+}
+.sx-gem-face::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.34) 43%, rgba(255, 255, 255, 0.1) 52%, transparent 66%);
+}
+.sx-gem-ink {
+  position: relative;
+  color: var(--brand-foreground);
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 1px 2px color-mix(in oklab, var(--brand-deep) 70%, transparent));
+}
+.sx-gem-ink svg {
+  width: calc(var(--gem-size) * 0.46);
+  height: calc(var(--gem-size) * 0.46);
+  stroke-width: 2.25;
+}
+.sx-gem-ink b {
+  font: 700 calc(var(--gem-size) * 0.4) / 1 var(--font-sans);
+  letter-spacing: -0.04em;
+}
+.sx-gem-muted .sx-gem-face {
+  background: linear-gradient(150deg, var(--card), var(--muted));
+  box-shadow: 0 0 0 1px var(--border), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+.sx-gem-muted .sx-gem-face::before { opacity: 0.4; }
+.sx-gem-muted .sx-gem-slab,
+.sx-gem-muted::after { display: none; }
+.sx-gem-muted .sx-gem-ink {
+  color: var(--muted-foreground);
+  filter: none;
+}
+
+/* Composer — brand light floating behind the prompt box */
+.sx-composer-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0 -6% -18% 35%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--brand-glow), transparent);
+  filter: blur(22px);
+  pointer-events: none;
+}
+.sx-chips {
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 16px), transparent);
+}
+.sx-chips::-webkit-scrollbar { display: none; }
+
+/* Toast entrance */
+.sx-toast-in {
+  animation: sx-toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-shimmer,
+  .sx-beam::before,
+  .sx-ping::after,
+  .sx-toast-in,
+  .sx-nav-halo {
+    animation: none !important;
+  }
+}

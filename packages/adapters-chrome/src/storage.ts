@@ -1,0 +1,37 @@
+import type { KeyValue } from "@super-x/adapters-backend"
+import { emptyState, type EngineState, type StateStore, type XAccount } from "@super-x/application"
+
+export const chromeKv: KeyValue = {
+  async get<T>(key: string) {
+    const items = await chrome.storage.local.get(key)
+    return items[key] as T | undefined
+  },
+  async set(key, value) {
+    await chrome.storage.local.set({ [key]: value })
+  },
+  async remove(key) {
+    await chrome.storage.local.remove(key)
+  },
+}
+
+export const ENGINE_CURRENT = "engine:current"
+export const engineKey = (accountId: string) => `engine:${accountId}`
+
+/** One EngineState per X account ("rangé par handle X", SPEC), in chrome.storage.local only. */
+export class ChromeStateStore implements StateStore {
+  constructor(private readonly kv: KeyValue = chromeKv) {}
+
+  async currentAccountId() {
+    return (await this.kv.get<string>(ENGINE_CURRENT)) ?? null
+  }
+
+  async load(accountId: string): Promise<EngineState> {
+    const saved = await this.kv.get<EngineState>(engineKey(accountId))
+    const placeholder: XAccount = { id: accountId, handle: "", name: "", tier: "free" }
+    return saved ?? emptyState(placeholder)
+  }
+
+  async save(state: EngineState) {
+    await chrome.storage.local.set({ [engineKey(state.account.id)]: state, [ENGINE_CURRENT]: state.account.id })
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@super-x/adapters-chrome",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@super-x/adapters-backend": "workspace:*",
+    "@super-x/application": "workspace:*",
+    "@super-x/contracts": "workspace:*",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.3.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.2"
+  }
+}

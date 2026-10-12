@@ -1,0 +1,2 @@
+ALTER TABLE "access" ADD COLUMN "student_link_attempts" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "access_student_email_unique" ON "access" USING btree ("student_email");

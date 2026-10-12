@@ -1,0 +1,13 @@
+node_modules
+.turbo
+.plasmo
+build
+dist
+*.log
+.DS_Store
+src/style.generated.css
+*.tsbuildinfo
+.env*
+!.env.example
+.secrets
+.data

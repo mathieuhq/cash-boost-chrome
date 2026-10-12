@@ -1,0 +1,37 @@
+{"data":{"threaded_conversation_with_injections_v2":{"instructions":[
+ {"type":"TimelineClearCache"},
+ {"type":"TimelineAddEntries","entries":[
+  {"entryId":"tweet-1900000000000000001","content":{"__typename":"TimelineTimelineItem","entryType":"TimelineTimelineItem",
+   "itemContent":{"itemType":"TimelineTweet","tweet_results":{"result":{"__typename":"Tweet","rest_id":"1900000000000000001",
+    "core":{"user_results":{"result":{"__typename":"User","rest_id":"111","core":{"screen_name":"me","name":"Me"},"is_blue_verified":true}}},
+    "legacy":{"full_text":"Reply 'GUIDE' and I'll DM it","conversation_id_str":"1900000000000000001","user_id_str":"111"}}}}}},
+  {"entryId":"conversationthread-1900000000000000050","content":{"__typename":"TimelineTimelineModule","displayType":"VerticalConversation",
+   "items":[
+    {"entryId":"conversationthread-1900000000000000050-tweet-1900000000000000050","item":{"itemContent":{
+     "itemType":"TimelineTweet","tweetDisplayType":"Tweet","tweet_results":{"result":{"__typename":"Tweet","rest_id":"1900000000000000050",
+      "core":{"user_results":{"result":{"__typename":"User","id":"VXNlcjoyMjI=","rest_id":"222",
+       "core":{"created_at":"Sat Dec 14 04:35:55 +0000 2013","name":"Jane","screen_name":"jane"},
+       "avatar":{"image_url":"https://pbs.twimg.com/profile_images/222/jane_normal.jpg"},"dm_permissions":{"can_dm":true},"is_blue_verified":false,"verification":{"verified":false},
+       "privacy":{"protected":false},
+       "relationship_perspectives":{"blocked_by":false,"blocking":false,"followed_by":true,"following":false,"muting":false}}}},
+      "legacy":{"full_text":"@me GUIDE","in_reply_to_status_id_str":"1900000000000000001","in_reply_to_user_id_str":"111",
+       "in_reply_to_screen_name":"me","conversation_id_str":"1900000000000000001","user_id_str":"222","favorited":false}}}}}},
+    {"entryId":"conversationthread-1900000000000000050-tweet-1900000000000000060","item":{"itemContent":{
+     "itemType":"TimelineTweet","tweetDisplayType":"Tweet","tweet_results":{"result":{"__typename":"Tweet","rest_id":"1900000000000000060",
+      "core":{"user_results":{"result":{"__typename":"User","rest_id":"111","core":{"screen_name":"me","name":"Me"}}}},
+      "legacy":{"full_text":"@jane check your DMs","in_reply_to_status_id_str":"1900000000000000050"}}}}}},
+    {"entryId":"conversationthread-1900000000000000050-cursor-showmore-1","item":{"itemContent":{"__typename":"TimelineTimelineCursor","cursorType":"ShowMore","value":"NESTED"}}}
+   ]}},
+  {"entryId":"conversationthread-1900000000000000070","content":{"__typename":"TimelineTimelineModule","displayType":"VerticalConversation",
+   "items":[
+    {"entryId":"conversationthread-1900000000000000070-tweet-1900000000000000070","item":{"itemContent":{
+     "itemType":"TimelineTweet","tweet_results":{"result":{"__typename":"TweetWithVisibilityResults","tweet":{"rest_id":"1900000000000000070",
+      "core":{"user_results":{"result":{"__typename":"User","rest_id":"333","legacy":{"screen_name":"old_shape","name":"Old Shape","followed_by":false,"can_dm":false,"profile_image_url_https":"https://pbs.twimg.com/profile_images/333/old_normal.jpg"}}}},
+      "note_tweet":{"note_tweet_results":{"result":{"text":"Long reply asking for the guide please"}}},
+      "legacy":{"full_text":"Long reply asking…","in_reply_to_status_id_str":"1900000000000000001"}}}}}}}
+   ]}},
+  {"entryId":"conversationthread-1900000000000000080","content":{"__typename":"TimelineTimelineModule","items":[
+    {"entryId":"conversationthread-1900000000000000080-tweet-1900000000000000080","item":{"itemContent":{"tweet_results":{"result":{"__typename":"TweetTombstone"}}}}}]}},
+  {"entryId":"cursor-bottom-2085474386491473579","content":{"__typename":"TimelineTimelineCursor","entryType":"TimelineTimelineCursor",
+   "cursorType":"Bottom","value":"DAAKCgABHPEX"}}]},
+ {"type":"TimelineTerminateTimeline","direction":"Top"}]}}}
