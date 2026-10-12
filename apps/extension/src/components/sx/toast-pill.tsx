@@ -9,7 +9,7 @@ interface ToastPillProps {
   children: React.ReactNode
 }
 
-/** Rerun's floating pill: card at 95 % with backdrop blur, entrance with a small bounce. */
+/** Floating pill: card at 95 % with backdrop blur, entrance with a small bounce. */
 export function ToastPill({ people, icon: Icon, children }: ToastPillProps) {
   return (
     <div

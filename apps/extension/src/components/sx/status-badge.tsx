@@ -1,11 +1,10 @@
 import { Badge } from "~components/ui/badge"
-import { cn } from "~lib/utils"
 
 type Variant = "brand" | "neutral" | "outline" | "success" | "warning" | "destructive"
 
 const STATUS = {
-  active: ["brand", "Active", true],
-  running: ["brand", "En cours", true],
+  active: ["success", "Active", true],
+  running: ["success", "En cours", true],
   paused: ["warning", "En pause", false],
   finished: ["neutral", "Terminée", false],
   queued: ["neutral", "En file", false],
@@ -18,7 +17,7 @@ const STATUS = {
 
 export type DomainStatus = keyof typeof STATUS
 
-/** Badge preset per domain status; the beam only on what is running right now. */
+/** Badge preset per domain status; a pulsing dot only on what is running right now. */
 export function StatusBadge({
   status,
   size,
@@ -30,9 +29,10 @@ export function StatusBadge({
   children?: React.ReactNode
   className?: string
 }) {
-  const [variant, label, beam] = STATUS[status]
+  const [variant, label, live] = STATUS[status]
   return (
-    <Badge variant={variant} size={size} className={cn(beam && "sx-beam", className)}>
+    <Badge variant={variant} size={size} className={className}>
+      {live && <span className="sx-ping sx-ping-success" aria-hidden="true" />}
       {children ?? label}
     </Badge>
   )

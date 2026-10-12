@@ -1,5 +1,5 @@
 /**
- * Rerun-style hero: the fact with a number, then the benefit in the brand gradient. One per view.
+ * Hero: the fact with a number, then the benefit in muted ink. One per view.
  * `inline` keeps the accent on the title's line and sizes the text to stay on one line.
  */
 export function Headline({
@@ -20,7 +20,7 @@ export function Headline({
         {accent && (
           <>
             {inline ? " " : <br />}
-            <span className="sx-gradient-text">{accent}</span>
+            <span className="text-muted-foreground">{accent}</span>
           </>
         )}
       </h2>

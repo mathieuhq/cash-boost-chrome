@@ -13,7 +13,7 @@ interface GemProps {
   className?: string
 }
 
-/** The glossy brand tile (Rerun's gem, in brand black). Max three brand gems on screen. */
+/** The glossy brand tile (in brand black). Max three brand gems on screen. */
 export function Gem({ icon: Icon = Zap, glyph, text, size = "default", tone = "brand", className }: GemProps) {
   return (
     <span

@@ -3,7 +3,6 @@ import { useState } from "react"
 import { Button } from "~components/ui/button"
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "~components/ui/popover"
 import { duration } from "~lib/format"
-import { cn } from "~lib/utils"
 import type { CampaignView } from "~sidepanel/model"
 
 import { ActionLog } from "./action-log"
@@ -42,12 +41,8 @@ export function CampaignCard({ campaign, now, onPause, onResume, onExport, onDel
         </div>
       </div>
 
-      <div
-        className={cn(
-          "grid grid-cols-3 rounded-lg shadow-[inset_0_0_0_1px_var(--border)]",
-          status === "paused" && "sx-stripes"
-        )}>
-        <Metric label="Leads" value={campaign.leads} gradient={live} />
+      <div className="grid grid-cols-3 rounded-lg bg-muted">
+        <Metric label="Leads" value={campaign.leads} />
         <Metric label="DMs" value={campaign.sent} />
         <Metric label="En file" value={campaign.queued} />
       </div>
@@ -62,8 +57,8 @@ export function CampaignCard({ campaign, now, onPause, onResume, onExport, onDel
       )}
 
       <div className="-mt-1 -mr-1.5 -mb-1.5 flex min-w-0 items-center gap-2">
-        <span className="text-mono min-w-0 flex-auto truncate text-muted-foreground">
-          <span className="text-brand-ink">{campaign.keyword}</span> · {meta}
+        <span className="min-w-0 flex-auto truncate text-xs text-muted-foreground">
+          <b className="font-semibold text-foreground">{campaign.keyword}</b> · {meta}
         </span>
         <div className="flex flex-none">
           <Button size="xs" variant="ghost" onClick={onExport}>
@@ -122,11 +117,11 @@ function DeleteButton({ keyword, leads, onConfirm }: { keyword: string; leads: n
   )
 }
 
-function Metric({ label, value, gradient = false }: { label: string; value: number; gradient?: boolean }) {
+function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2 [&+&]:border-l [&+&]:border-border">
-      <span className="text-mono text-muted-foreground">{label}</span>
-      <span className={cn("text-metric", gradient && "sx-gradient-text font-semibold")}>{value}</span>
+    <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2 [&+&]:border-l [&+&]:border-foreground/8">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-metric">{value}</span>
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import { Inbox } from "lucide-react"
 
-import { CardStack } from "~components/sx/card-stack"
 import { EmptyState } from "~components/sx/empty-state"
 import { ReviewCard } from "~components/sx/review-card"
 import { SectionHeader } from "~components/sx/section-header"
@@ -10,7 +9,7 @@ import { useEngine } from "../store"
 
 export function ReviewsView() {
   const { state, send } = useEngine()
-  const [review, ...waiting] = state.reviews
+  const [review] = state.reviews
 
   if (!review) {
     return (
@@ -26,16 +25,14 @@ export function ReviewsView() {
         title="Commentaires ambigus"
         action={<span className="text-mono text-muted-foreground">{state.reviews.length} en attente</span>}
       />
-      <CardStack behind={waiting.length}>
-        <ReviewCard
-          review={review}
-          onApprove={() => {
-            send({ type: "approve", reviewId: review.id })
-            notify({ people: [review.name], children: `DM en file pour @${review.handle}` })
-          }}
-          onReject={() => send({ type: "reject", reviewId: review.id })}
-        />
-      </CardStack>
+      <ReviewCard
+        review={review}
+        onApprove={() => {
+          send({ type: "approve", reviewId: review.id })
+          notify({ people: [review.name], children: `DM en file pour @${review.handle}` })
+        }}
+        onReject={() => send({ type: "reject", reviewId: review.id })}
+      />
       <p className="px-1 text-xs text-muted-foreground">
         Jev estime entre 40 et 75 % que ces personnes demandent la ressource. À toi de trancher.
       </p>

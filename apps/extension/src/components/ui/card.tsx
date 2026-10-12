@@ -2,7 +2,7 @@ import * as React from "react"
 
 import { cn } from "~lib/utils"
 
-// DS: Rerun's floating card — no grey border, shadow-card, 14px corners, space-4 padding.
+// DS: floating card — no grey border, shadow-card, 14px corners, space-4 padding.
 function Card({
   className,
   compact = false,

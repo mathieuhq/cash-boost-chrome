@@ -19,7 +19,7 @@ interface ComposerProps {
 }
 
 /**
- * Rerun's prompt box applied to creating a Campaign: paste the tweet URL, set the rest in chips, launch.
+ * Prompt box for creating a Campaign: paste the tweet URL, set the rest in chips, launch.
  * The bar always fits on one line; chips scroll horizontally under a fade when space runs out.
  */
 export const Composer = forwardRef<HTMLTextAreaElement, ComposerProps>(function Composer(

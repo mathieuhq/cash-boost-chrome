@@ -1,7 +1,7 @@
 # @super-x/extension
 
 Extension Chrome (Plasmo, MV3) : side panel React construit sur le design system **Cash Boost**
-— shadcn/ui new-york + finition Rerun + bleu X.
+— shadcn/ui new-york, primary noir.
 
 ```bash
 pnpm dev        # Tailwind en watch + plasmo dev → charger build/chrome-mv3-dev dans chrome://extensions
@@ -26,9 +26,9 @@ sous `openrouter:key` dans `chrome.storage.local`). Pas de backend, pas de permi
 | `src/sidepanel/store.tsx` | Lit `chrome.storage.local` (clé OpenRouter, état du compte X courant) et projette le view model. |
 | `src/sidepanel/project.ts` | `EngineState` → `PanelState` (compteurs, journal, quotas). |
 | `src/sidepanel/gates.tsx` | Écrans avant le panel : chargement, compte X à connecter sur x.com. |
-| `src/style.css` | Tokens du DS (`:root` / `.dark`, `@theme inline`) + effets Rerun. Compilé par la CLI Tailwind vers `style.generated.css` (ignoré par git). |
+| `src/style.css` | Tokens du DS (`:root` / `.dark`, `@theme inline`) + effets maison. Compilé par la CLI Tailwind vers `style.generated.css` (ignoré par git). |
 | `src/components/ui/` | Composants shadcn ajustés selon `shadcn.md` du DS. |
-| `src/components/sx/` | Langage Rerun et composants métier. |
+| `src/components/sx/` | Composants du DS et composants métier. |
 
 ## Notes
 

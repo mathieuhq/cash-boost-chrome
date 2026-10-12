@@ -4,7 +4,7 @@ import { Slot } from "radix-ui"
 
 import { cn } from "~lib/utils"
 
-// DS: Rerun's soft pill (tinted at 10 %); add `sx-beam` for live states.
+// DS: soft pill (tinted at 10 %).
 const badgeVariants = cva(
   "inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-normal whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-3",
   {

@@ -34,7 +34,6 @@
   --brand-light: #525252;
   --brand-deep: #000000;
   --brand-glow: rgba(0, 0, 0, 0.18);
-  --stripes-ink: #00000008;
   --success: #047857;
   --success-soft: #ecfdf5;
   --warning: #b45309;
@@ -74,7 +73,6 @@
   --brand-light: #ffffff;
   --brand-deep: #a1a1a1;
   --brand-glow: rgba(255, 255, 255, 0.16);
-  --stripes-ink: #ffffff06;
   --success: #34d399;
   --success-soft: #052e22;
   --warning: #fbbf24;
@@ -125,7 +123,6 @@
   --color-brand-light: var(--brand-light);
   --color-brand-deep: var(--brand-deep);
   --color-brand-glow: var(--brand-glow);
-  --color-stripes-ink: var(--stripes-ink);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -190,20 +187,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Rerun effects (copied from the DS bundle.css; all stop under reduced motion) ── */
-
-@property --sx-beam-angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0deg;
-}
+/* ── Effects (all stop under reduced motion) ── */
 
 @keyframes sx-shimmer {
   0% { background-position: 100% center, 0 0; }
   100% { background-position: 0% center, 0 0; }
-}
-@keyframes sx-beam {
-  to { --sx-beam-angle: 360deg; }
 }
 @keyframes sx-ping {
   0% { opacity: 0.6; transform: scale(1); }
@@ -213,12 +201,8 @@
   0% { opacity: 0; transform: translateY(6px) scale(0.92); }
   100% { opacity: 1; transform: none; }
 }
-@keyframes sx-halo {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
 
-/* Shimmer text — Rerun's "Thinking…" */
+/* Shimmer text — in-progress states */
 .sx-shimmer {
   --sx-spread: 24px;
   color: transparent;
@@ -237,86 +221,26 @@
     linear-gradient(var(--brand-ink), var(--brand-ink));
 }
 
-/* Beam — a light arc running around a pill's edge */
-.sx-beam {
-  position: relative;
-  isolation: isolate;
-}
-.sx-beam::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  pointer-events: none;
-  background: conic-gradient(
-    from var(--sx-beam-angle),
-    transparent 0%,
-    color-mix(in oklab, var(--brand) 25%, transparent) 10%,
-    var(--brand) 18%,
-    transparent 30%,
-    transparent 50%,
-    color-mix(in oklab, var(--brand) 25%, transparent) 60%,
-    var(--brand) 68%,
-    transparent 80%
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: sx-beam 3.2s linear infinite;
-}
-
 /* Ping dot */
 .sx-ping {
   position: relative;
-  width: 8px;
-  height: 8px;
+  width: var(--sx-ping-size, 8px);
+  height: var(--sx-ping-size, 8px);
   flex: none;
   border-radius: 999px;
-  background: var(--brand);
+  background: var(--sx-ping-color, var(--brand));
+}
+.sx-ping-success {
+  --sx-ping-size: 6px;
+  --sx-ping-color: var(--success);
 }
 .sx-ping::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--brand);
+  background: inherit;
   animation: sx-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-/* Stripes — Rerun's 45° hatch */
-.sx-stripes {
-  background-image: repeating-linear-gradient(-45deg, var(--stripes-ink) 0 1px, transparent 1px 8px);
-}
-
-/* Halo — soft radial light under the active thing */
-.sx-halo {
-  position: absolute;
-  pointer-events: none;
-  background: radial-gradient(
-    62% 100% at 50% 100%,
-    var(--brand-glow),
-    color-mix(in oklab, var(--brand-glow) 27%, transparent) 45%,
-    transparent 78%
-  );
-}
-.sx-nav-halo {
-  inset: auto 0 0 0;
-  height: 75%;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-[aria-selected="true"] > .sx-nav-halo {
-  opacity: 1;
-  animation: sx-halo 3s ease-in-out infinite;
-}
-
-/* Gradient text — second line of the Headline, live metrics */
-.sx-gradient-text {
-  color: transparent;
-  background-image: radial-gradient(at 50% -80%, var(--brand-light) 5%, var(--brand) 50%, var(--brand-deep) 140%);
-  -webkit-background-clip: text;
-  background-clip: text;
 }
 
 /* Gem — the glossy brand tile */
@@ -425,10 +349,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sx-shimmer,
-  .sx-beam::before,
   .sx-ping::after,
-  .sx-toast-in,
-  .sx-nav-halo {
+  .sx-toast-in {
     animation: none !important;
   }
 }

@@ -7,7 +7,7 @@ import { StatusBadge } from "./status-badge"
 
 const MARK = { done: CircleCheck, failed: CircleX, waiting: Lock } as const
 
-/** Rerun's "This morning" list: one line per Action of a Tick. */
+/** Activity list: one line per Action of a Tick. */
 export function ActionLog({ items, bare = false }: { items: ActionLogItem[]; bare?: boolean }) {
   return (
     <ul className={cn("flex flex-col gap-2", !bare && "border-t border-border pt-2")}>
