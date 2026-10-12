@@ -11,3 +11,6 @@ src/style.generated.css
 !.env.example
 .secrets
 .data
+
+# Promo video (local only)
+video/
