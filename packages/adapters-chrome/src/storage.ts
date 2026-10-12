@@ -26,6 +26,9 @@ export const OPENROUTER_KEY = "openrouter:key"
 /** Messages, duration and follow rule applied to new Campaigns (Options tab). */
 export const CAMPAIGN_DEFAULTS = "options:campaignDefaults"
 
+/** `{ start, end }` local hours chosen in the Options tab; overrides the Config's active hours (ADR 0011). */
+export const ACTIVE_HOURS = "options:activeHours"
+
 export const ENGINE_CURRENT = "engine:current"
 export const engineKey = (accountId: string) => `engine:${accountId}`
 

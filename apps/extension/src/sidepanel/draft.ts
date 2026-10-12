@@ -1,6 +1,8 @@
 import { MAX_TITLE_LENGTH, MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl } from "@super-x/domain"
 
-import type { CampaignDefaults, CampaignDraft, MessageTemplates } from "./model"
+import { DEFAULT_CONFIG } from "@super-x/application"
+
+import type { ActiveHoursChoice, CampaignDefaults, CampaignDraft, MessageTemplates } from "./model"
 
 export { MAX_TITLE_LENGTH, MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl }
 export const DURATIONS = [24, 48, 72] as const
@@ -21,6 +23,21 @@ export const DEFAULT_TEMPLATES: MessageTemplates = {
     "je n'arrive pas à t'écrire {@handle}, ouvre tes DMs",
     "{@handle} suis-moi pour que je puisse t'envoyer le lien en DM",
   ],
+}
+
+export const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
+
+export const DEFAULT_ACTIVE_HOURS: ActiveHoursChoice = {
+  start: DEFAULT_CONFIG.pacing.activeHours.start,
+  end: DEFAULT_CONFIG.pacing.activeHours.end,
+}
+
+const isHour = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 23
+
+/** The active hours saved in Options, or the Config's when nothing valid was saved. */
+export function readActiveHours(saved: unknown): ActiveHoursChoice {
+  const hours = saved as Partial<ActiveHoursChoice> | undefined
+  return hours && isHour(hours.start) && isHour(hours.end) ? { start: hours.start, end: hours.end } : { ...DEFAULT_ACTIVE_HOURS }
 }
 
 export function defaultCampaignDefaults(): CampaignDefaults {

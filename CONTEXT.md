@@ -24,7 +24,7 @@ Termes à utiliser tels quels dans le code (anglais) et la conversation.
 | **Tick** | Un cycle idempotent déclenché par alarme : scanner les nouveaux Comments, classer, enfiler, exécuter les Actions permises. Plus espacé quand le post ne reçoit plus de Comments ; absent la nuit. |
 | **Pacing** | Le rythme d'une personne, imité par le moteur (ADR 0011) : délais tirés vers le court avec une longue queue, Burst d'Actions suivi d'une Break, ActiveHours. Constantes de la Config. |
 | **Burst** | Une suite d'Actions faites d'une traite (5 à 12, tiré au sort), suivie d'une Break de 8 à 35 min. |
-| **ActiveHours** | Plage horaire locale du navigateur (8h–21h par défaut, début décalé chaque jour) hors de laquelle rien n'est scanné ni envoyé. |
+| **ActiveHours** | Plage horaire locale du navigateur (8h–21h par défaut, réglable dans Options, début décalé chaque jour) hors de laquelle rien n'est scanné ni envoyé. |
 | **CircuitBreaker** | Arrêt de toutes les Campaigns sur signal de restriction X (429/88, 226, 326, 344/185, session expirée), XChat verrouillé (`xchat_locked`) ou méconnaissable (`xchat_unavailable`), ou arrêt d'urgence manuel. |
 | **XChat** | La messagerie chiffrée de X. L'extension la pilote par sa page web, dans un onglet épinglé dédié (ADR 0009). |
 | **Config** | Constante `DEFAULT_CONFIG` livrée avec l'extension : seuils Jev, plafonds par AccountTier, cadence, queryIds et features X, mode d'envoi des DMs et repères XChat. La changer demande une nouvelle version de l'extension. |

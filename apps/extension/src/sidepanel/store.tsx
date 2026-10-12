@@ -1,12 +1,12 @@
-import { CAMPAIGN_DEFAULTS, ENGINE_CURRENT, engineKey, OPENROUTER_KEY } from "@super-x/adapters-chrome"
+import { ACTIVE_HOURS, CAMPAIGN_DEFAULTS, ENGINE_CURRENT, engineKey, OPENROUTER_KEY } from "@super-x/adapters-chrome"
 import { DEFAULT_CONFIG, type EngineState } from "@super-x/application"
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
 import { useNow } from "~lib/use-now"
 import { send, type Command, type CommandResult } from "~messages"
 
-import { readDefaults } from "./draft"
-import type { CampaignDefaults, PanelState } from "./model"
+import { readActiveHours, readDefaults } from "./draft"
+import type { ActiveHoursChoice, CampaignDefaults, PanelState } from "./model"
 import { project } from "./project"
 
 /** Everything the panel reads from chrome.storage.local; the service worker is the only writer. */
@@ -14,23 +14,30 @@ interface Snapshot {
   loaded: boolean
   hasOpenRouterKey: boolean
   defaults: CampaignDefaults
+  activeHours: ActiveHoursChoice
   engine?: EngineState
 }
 
 async function readSnapshot(): Promise<Snapshot> {
-  const base = await chrome.storage.local.get([OPENROUTER_KEY, CAMPAIGN_DEFAULTS, ENGINE_CURRENT])
+  const base = await chrome.storage.local.get([OPENROUTER_KEY, CAMPAIGN_DEFAULTS, ACTIVE_HOURS, ENGINE_CURRENT])
   const current = base[ENGINE_CURRENT] as string | undefined
   const engine = current ? ((await chrome.storage.local.get(engineKey(current)))[engineKey(current)] as EngineState | undefined) : undefined
   return {
     loaded: true,
     hasOpenRouterKey: !!base[OPENROUTER_KEY],
     defaults: readDefaults(base[CAMPAIGN_DEFAULTS] as Partial<CampaignDefaults> | undefined),
+    activeHours: readActiveHours(base[ACTIVE_HOURS]),
     engine,
   }
 }
 
 function useSnapshot(): Snapshot {
-  const [snapshot, setSnapshot] = useState<Snapshot>({ loaded: false, hasOpenRouterKey: false, defaults: readDefaults(undefined) })
+  const [snapshot, setSnapshot] = useState<Snapshot>({
+    loaded: false,
+    hasOpenRouterKey: false,
+    defaults: readDefaults(undefined),
+    activeHours: readActiveHours(undefined),
+  })
   useEffect(() => {
     let alive = true
     const refresh = () => readSnapshot().then((s) => alive && setSnapshot(s))
@@ -51,6 +58,8 @@ interface PanelContext {
   hasOpenRouterKey: boolean
   /** Applied to every new Campaign; edited in the Options tab. */
   defaults: CampaignDefaults
+  /** Local hours between which the engine works; edited in the Options tab. */
+  activeHours: ActiveHoursChoice
   /** null until an X account was detected on x.com. */
   state: PanelState | null
   send: (command: Command) => Promise<CommandResult>
@@ -67,6 +76,7 @@ export function PanelProvider({ children }: { children: React.ReactNode }) {
       loaded: snapshot.loaded,
       hasOpenRouterKey: snapshot.hasOpenRouterKey,
       defaults: snapshot.defaults,
+      activeHours: snapshot.activeHours,
       state: snapshot.engine && snapshot.engine.account.handle ? project(snapshot.engine, { config: DEFAULT_CONFIG, now }) : null,
       send,
     }),

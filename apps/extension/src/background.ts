@@ -1,5 +1,6 @@
 // Composition root of the service worker (ADR 0002): wires the engine to Chrome, X and OpenRouter.
 import {
+  ACTIVE_HOURS,
   ALARMS,
   CAMPAIGN_DEFAULTS,
   ChromeScheduler,
@@ -11,12 +12,26 @@ import {
 } from "@super-x/adapters-chrome"
 import { OpenRouterJev } from "@super-x/adapters-openrouter"
 import { XWebGateway } from "@super-x/adapters-x"
-import { DEFAULT_CONFIG, Engine } from "@super-x/application"
+import { DEFAULT_CONFIG, Engine, type Config } from "@super-x/application"
 
 import type { Command, CommandResult } from "~messages"
+import type { ActiveHoursChoice } from "~sidepanel/model"
 
 const clock = { now: () => Date.now() }
-const config = { get: async () => DEFAULT_CONFIG }
+
+function isHour(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 23
+}
+
+/** The bundled Config, with the active hours the user chose in Options on top. */
+const config = {
+  async get(): Promise<Config> {
+    const chosen = await chromeKv.get<Partial<ActiveHoursChoice>>(ACTIVE_HOURS)
+    if (!chosen || !isHour(chosen.start) || !isHour(chosen.end)) return DEFAULT_CONFIG
+    const { pacing } = DEFAULT_CONFIG
+    return { ...DEFAULT_CONFIG, pacing: { ...pacing, activeHours: { ...pacing.activeHours, start: chosen.start, end: chosen.end } } }
+  },
+}
 const scheduler = new ChromeScheduler()
 
 const engine = new Engine({
@@ -46,6 +61,15 @@ async function handle(command: Command): Promise<CommandResult> {
     case "setCampaignDefaults":
       await chromeKv.set(CAMPAIGN_DEFAULTS, command.defaults)
       return ok
+    case "setActiveHours": {
+      const { start, end } = command.hours
+      if (!isHour(start) || !isHour(end)) return { ok: false, error: "invalid_hours" }
+      await chromeKv.set(ACTIVE_HOURS, { start, end })
+      // The engine re-reads the hours on its next run: wake it so a wider window applies right away.
+      await scheduler.scheduleTick(clock.now())
+      await scheduler.scheduleAction(clock.now())
+      return ok
+    }
     case "connectX": {
       const result = await engine.connect()
       if (result.ok) await scheduler.scheduleTick(clock.now())

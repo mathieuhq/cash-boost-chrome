@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { defaultCampaignDefaults, emptyDraft, parseTweetUrl, readDefaults, toVariants, validateDraft } from "./draft"
+import { defaultCampaignDefaults, emptyDraft, parseTweetUrl, readActiveHours, readDefaults, toVariants, validateDraft } from "./draft"
 import type { CampaignDraft } from "./model"
 
 function validDraft(patch: Partial<CampaignDraft> = {}): CampaignDraft {
@@ -59,5 +59,14 @@ describe("readDefaults", () => {
 describe("toVariants", () => {
   it("keeps one trimmed variant per non-empty line", () => {
     expect(toVariants(" a \n\n b\n")).toEqual(["a", "b"])
+  })
+})
+
+describe("readActiveHours", () => {
+  it("falls back to the bundled hours when nothing valid was saved", () => {
+    expect(readActiveHours(undefined)).toEqual({ start: 8, end: 21 })
+    expect(readActiveHours({ start: 25, end: 3 })).toEqual({ start: 8, end: 21 })
+    expect(readActiveHours({ start: 10, end: 22 })).toEqual({ start: 10, end: 22 })
+    expect(readActiveHours({ start: 0, end: 0 })).toEqual({ start: 0, end: 0 })
   })
 })

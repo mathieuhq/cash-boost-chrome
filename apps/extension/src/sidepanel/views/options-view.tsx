@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react"
+
 import { QuotaMeter } from "~components/sx/quota-meter"
 import { SectionHeader } from "~components/sx/section-header"
 import { TemplatesEditor } from "~components/sx/templates-editor"
@@ -6,19 +8,60 @@ import { Card, CardDescription } from "~components/ui/card"
 import { Switch } from "~components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "~components/ui/tabs"
 
-import { DURATIONS } from "../draft"
+import { cn } from "~lib/utils"
+
+import { DURATIONS, HOURS } from "../draft"
 import { OpenRouterKeyForm } from "../gates"
-import type { CampaignDefaults } from "../model"
+import type { ActiveHoursChoice, CampaignDefaults } from "../model"
 import { useEngine, usePanel } from "../store"
 
 const FULL = "Plafond atteint : les leads attendent dans la file."
 
+const hourLabel = (hour: number) => `${String(hour).padStart(2, "0")}h`
+
+function activeHoursSentence({ start, end }: ActiveHoursChoice): string {
+  if (start === end) return "Toute la journée, sans nuit."
+  const span = start < end ? end - start : 24 - start + end
+  return `Rien n'est scanné ni envoyé de ${hourLabel(end)} à ${hourLabel(start)} (heure de ton ordinateur). ${span}h d'activité par jour.`
+}
+
+/** A native select dressed like the Input component: its own arrow is hidden, ours sits inside the padding. */
+function HourSelect({ label, value, onChange }: { label: string; value: number; onChange: (hour: number) => void }) {
+  return (
+    <label className="flex flex-1 flex-col gap-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="relative">
+        <select
+          aria-label={label}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className={cn(
+            "h-9 w-full appearance-none rounded-lg border border-input bg-card pr-9 pl-3 font-mono text-[13px] shadow-xs outline-none",
+            "transition-[border-color,box-shadow] focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/20"
+          )}
+        >
+          {HOURS.map((hour) => (
+            <option key={hour} value={hour}>
+              {hourLabel(hour)}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground"
+        />
+      </span>
+    </label>
+  )
+}
+
 export function OptionsView() {
   const { state, send } = useEngine()
-  const { defaults } = usePanel()
+  const { defaults, activeHours } = usePanel()
   const { dms, likes, replies, rampUp } = state.quotas
 
   const update = (patch: Partial<CampaignDefaults>) => send({ type: "setCampaignDefaults", defaults: { ...defaults, ...patch } })
+  const updateHours = (patch: Partial<ActiveHoursChoice>) => send({ type: "setActiveHours", hours: { ...activeHours, ...patch } })
 
   return (
     <div className="flex flex-col gap-3">
@@ -48,6 +91,17 @@ export function OptionsView() {
             onCheckedChange={(mustFollow) => update({ mustFollow })}
           />
         </div>
+      </Card>
+
+      <div className="mt-4">
+        <SectionHeader title="Heures actives" />
+      </div>
+      <Card>
+        <div className="flex gap-3">
+          <HourSelect label="Début" value={activeHours.start} onChange={(start) => updateHours({ start })} />
+          <HourSelect label="Fin" value={activeHours.end} onChange={(end) => updateHours({ end })} />
+        </div>
+        <CardDescription className="text-xs">{activeHoursSentence(activeHours)}</CardDescription>
       </Card>
 
       <div className="mt-4">

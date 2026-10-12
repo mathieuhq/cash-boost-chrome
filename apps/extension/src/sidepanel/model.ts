@@ -87,6 +87,12 @@ export interface TickView {
 }
 
 /** Set once in the Options tab, applied to every new Campaign. */
+/** Local hours between which the engine works, 0–23; `start === end` means all day. */
+export interface ActiveHoursChoice {
+  start: number
+  end: number
+}
+
 export interface CampaignDefaults {
   templates: MessageTemplates
   mustFollow: boolean
