@@ -19,12 +19,6 @@ const FULL = "Plafond atteint : les leads attendent dans la file."
 
 const hourLabel = (hour: number) => `${String(hour).padStart(2, "0")}h`
 
-function activeHoursSentence({ start, end }: ActiveHoursChoice): string {
-  if (start === end) return "Toute la journée, sans nuit."
-  const span = start < end ? end - start : 24 - start + end
-  return `Rien n'est scanné ni envoyé de ${hourLabel(end)} à ${hourLabel(start)} (heure de ton ordinateur). ${span}h d'activité par jour.`
-}
-
 /** A native select dressed like the Input component: its own arrow is hidden, ours sits inside the padding. */
 function HourSelect({ label, value, onChange }: { label: string; value: number; onChange: (hour: number) => void }) {
   return (
@@ -101,7 +95,6 @@ export function OptionsView() {
           <HourSelect label="Début" value={activeHours.start} onChange={(start) => updateHours({ start })} />
           <HourSelect label="Fin" value={activeHours.end} onChange={(end) => updateHours({ end })} />
         </div>
-        <CardDescription className="text-xs">{activeHoursSentence(activeHours)}</CardDescription>
       </Card>
 
       <div className="mt-4">
