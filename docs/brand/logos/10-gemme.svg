@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" color="#0f1419">
-<defs><filter id="l9b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter></defs>
-<ellipse cx="64" cy="74" rx="38" ry="40" fill="#1d9bf0" opacity=".45" filter="url(#l9b)"/>
-<path d="M64 8 22 56l42 8Z" fill="#8ecdf8"/>
-<path d="M64 8l42 48-42 8Z" fill="#1d9bf0"/>
-<path d="M22 56l42 8v56Z" fill="#0c7abf"/>
-<path d="M106 56 64 64v56Z" fill="#095f94"/>
-<path d="M64 8 46 40l18 4Z" fill="#fff" opacity=".55"/>
-</svg>
