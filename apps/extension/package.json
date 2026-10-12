@@ -45,7 +45,6 @@
     "permissions": [
       "sidePanel",
       "storage",
-      "unlimitedStorage",
       "alarms",
       "scripting"
     ],

@@ -47,7 +47,7 @@ Les valeurs sont dans [`packages/application/src/config.ts`](packages/applicatio
 
 ### Vos données
 
-Pas de serveur, pas de compte. Campagnes, leads et clé OpenRouter restent dans `chrome.storage.local`. Le texte d'un commentaire ne quitte le navigateur que pour être classé par Jev, envoyé directement à OpenRouter avec votre clé. Sans clé, seuls les commentaires qui contiennent le mot-clé sont traités.
+Pas de serveur, pas de compte. Campagnes, leads et clé OpenRouter restent dans `chrome.storage.local`. Le texte d'un commentaire ne quitte le navigateur que pour être classé par Jev, envoyé directement à OpenRouter avec votre clé. Sans clé, seuls les commentaires qui contiennent le mot-clé sont traités. Le détail est dans la [politique de confidentialité](PRIVACY.md).
 
 ## Installation
 
