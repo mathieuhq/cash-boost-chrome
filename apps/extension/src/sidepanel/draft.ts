@@ -1,8 +1,8 @@
-import { MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl } from "@super-x/domain"
+import { MAX_TITLE_LENGTH, MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl } from "@super-x/domain"
 
-import type { CampaignDraft, MessageTemplates } from "./model"
+import type { CampaignDefaults, CampaignDraft, MessageTemplates } from "./model"
 
-export { MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl }
+export { MAX_TITLE_LENGTH, MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl }
 export const DURATIONS = [24, 48, 72] as const
 
 export const DEFAULT_TEMPLATES: MessageTemplates = {
@@ -23,12 +23,8 @@ export const DEFAULT_TEMPLATES: MessageTemplates = {
   ],
 }
 
-export function emptyDraft(): CampaignDraft {
+export function defaultCampaignDefaults(): CampaignDefaults {
   return {
-    tweetUrl: "",
-    keyword: "",
-    leadMagnetUrl: "",
-    formerLinks: [],
     templates: {
       dm: [...DEFAULT_TEMPLATES.dm],
       ackSent: [...DEFAULT_TEMPLATES.ackSent],
@@ -36,6 +32,22 @@ export function emptyDraft(): CampaignDraft {
     },
     mustFollow: false,
     durationHours: 48,
+  }
+}
+
+/** What the user saved in Options, completed with the built-in defaults. */
+export function readDefaults(saved: Partial<CampaignDefaults> | undefined): CampaignDefaults {
+  return { ...defaultCampaignDefaults(), ...saved }
+}
+
+export function emptyDraft(): CampaignDraft {
+  return {
+    title: "",
+    tweetUrl: "",
+    keyword: "",
+    leadMagnetUrl: "",
+    formerLinks: [],
+    ...defaultCampaignDefaults(),
   }
 }
 

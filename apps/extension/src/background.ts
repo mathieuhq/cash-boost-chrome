@@ -1,84 +1,50 @@
-// Composition root of the service worker (ADR 0002): wires the engine to Chrome, X and the backend.
-import {
-  BackendAccess,
-  BackendClassifier,
-  BackendClient,
-  BackendConfig,
-  BackendErrorReporter,
-} from "@super-x/adapters-backend"
+// Composition root of the service worker (ADR 0002): wires the engine to Chrome, X and OpenRouter.
 import {
   ALARMS,
+  CAMPAIGN_DEFAULTS,
   ChromeScheduler,
   ChromeStateStore,
   chromeKv,
-  openCheckout,
-  requestStudentCode,
-  signInForTest,
-  signInWithGoogle,
-  verifyStudentCode,
+  OPENROUTER_KEY,
   XChatTab,
   XTab,
 } from "@super-x/adapters-chrome"
+import { OpenRouterJev } from "@super-x/adapters-openrouter"
 import { XWebGateway } from "@super-x/adapters-x"
-import { Engine } from "@super-x/application"
+import { DEFAULT_CONFIG, Engine } from "@super-x/application"
 
-import { BACKEND_URL, TEST_AUTH } from "~env"
 import type { Command, CommandResult } from "~messages"
 
 const clock = { now: () => Date.now() }
-const client = new BackendClient({ baseUrl: BACKEND_URL, kv: chromeKv })
-const config = new BackendConfig(client, clock)
-const access = new BackendAccess(client, clock)
-const reporter = new BackendErrorReporter(client, chrome.runtime.getManifest().version)
+const config = { get: async () => DEFAULT_CONFIG }
 const scheduler = new ChromeScheduler()
 
 const engine = new Engine({
   x: new XWebGateway(new XTab(), config, new XChatTab()),
-  classifier: new BackendClassifier(client),
-  access,
+  classifier: new OpenRouterJev({ apiKey: () => chromeKv.get<string>(OPENROUTER_KEY) }),
   config,
   store: new ChromeStateStore(),
   scheduler,
   clock,
   random: Math.random,
   ids: () => crypto.randomUUID(),
-  reporter,
 })
 
 const ok: CommandResult = { ok: true }
 
 async function handle(command: Command): Promise<CommandResult> {
   switch (command.type) {
-    case "signIn": {
-      const result = await (TEST_AUTH ? signInForTest(client) : signInWithGoogle(client))
-      if (!result.ok) return result
-      await access.refresh().catch(() => undefined)
-      await engine.connect()
-      await scheduler.scheduleTick(clock.now())
+    case "setOpenRouterKey": {
+      const key = command.key?.trim()
+      if (key) await chromeKv.set(OPENROUTER_KEY, key)
+      else await chromeKv.remove(OPENROUTER_KEY)
+      // Comments left unclassified are picked up right away.
+      if (key) await scheduler.scheduleTick(clock.now())
       return ok
     }
-    case "signOut":
-      await client.signOut()
+    case "setCampaignDefaults":
+      await chromeKv.set(CAMPAIGN_DEFAULTS, command.defaults)
       return ok
-    case "refreshAccess":
-      try {
-        await access.refresh()
-        return ok
-      } catch {
-        return { ok: false, error: "network" }
-      }
-    case "linkStudent":
-      return requestStudentCode(client, command.email)
-    case "verifyStudent": {
-      const result = await verifyStudentCode(client, command.code)
-      if (result.ok) {
-        await access.refresh().catch(() => undefined)
-        await scheduler.scheduleTick(clock.now())
-      }
-      return result
-    }
-    case "checkout":
-      return openCheckout(client)
     case "connectX": {
       const result = await engine.connect()
       if (result.ok) await scheduler.scheduleTick(clock.now())
@@ -133,7 +99,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
     if (alarm.name === ALARMS.tick) {
       await engine.tick()
-      await reporter.flush((await config.get()).version)
     } else if (alarm.name === ALARMS.act) {
       await engine.act()
     }

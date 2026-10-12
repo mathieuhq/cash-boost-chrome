@@ -1,6 +1,6 @@
 # 0008 — Liaison élève par email d'achat vérifié, verrouillée sur un compte
 
-**Statut** : accepté — 2026-10-12 (remplace la lecture du cookie `LH_access` prévue par la SPEC)
+**Statut** : remplacé par l'ADR 0010 — 2026-10-12 (accepté le 2026-10-12 ; remplaçait la lecture du cookie `LH_access` prévue par la SPEC)
 
 ## Décision
 1. L'élève saisit l'email avec lequel il a acheté Growth Boost (`POST /api/student/link { email }`).

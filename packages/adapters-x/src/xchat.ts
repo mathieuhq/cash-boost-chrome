@@ -1,7 +1,7 @@
 // Drives the XChat page (x.com/i/chat/<conversation>) in a dedicated tab. XChat decrypts the
 // messages for display, so reading the page is the only way to see what was already sent.
-// The UI lives in an open shadow root; its markers come from RemoteConfig (`x.xchat`).
-import type { XChatSelectors } from "@super-x/contracts"
+// The UI lives in an open shadow root; its markers come from the Config (`x.xchat`).
+import type { XChatSelectors } from "@super-x/application"
 
 /** How many of the last messages are searched for the link. */
 export const XCHAT_HISTORY = 10

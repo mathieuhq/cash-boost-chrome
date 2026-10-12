@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { emptyDraft, parseTweetUrl, toVariants, validateDraft } from "./draft"
+import { defaultCampaignDefaults, emptyDraft, parseTweetUrl, readDefaults, toVariants, validateDraft } from "./draft"
 import type { CampaignDraft } from "./model"
 
 function validDraft(patch: Partial<CampaignDraft> = {}): CampaignDraft {
@@ -46,6 +46,13 @@ describe("validateDraft", () => {
 
   it("rejects a lead magnet that is not an http(s) URL", () => {
     expect(validateDraft(validDraft({ leadMagnetUrl: "javascript:alert(1)" })).leadMagnetUrl).toBeDefined()
+  })
+})
+
+describe("readDefaults", () => {
+  it("completes what was saved in Options with the built-in defaults", () => {
+    expect(readDefaults(undefined)).toEqual(defaultCampaignDefaults())
+    expect(readDefaults({ durationHours: 72 })).toEqual({ ...defaultCampaignDefaults(), durationHours: 72 })
   })
 })
 

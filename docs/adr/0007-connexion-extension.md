@@ -1,6 +1,6 @@
 # 0007 — Connexion Google de l'extension par code à usage unique
 
-**Statut** : accepté — 2026-10-11
+**Statut** : remplacé par l'ADR 0010 — 2026-10-12 (accepté le 2026-10-11)
 
 ## Décision
 - Le side panel demande au service worker de lancer `chrome.identity.launchWebAuthFlow` sur

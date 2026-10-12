@@ -1,5 +1,4 @@
-import type { ActivityEntry, ActivityKind, EngineState } from "@super-x/application"
-import type { Entitlement, RemoteConfig } from "@super-x/contracts"
+import type { ActivityEntry, ActivityKind, Config, EngineState } from "@super-x/application"
 import { pendingCount, quotaUsage, type Campaign, type Lead } from "@super-x/domain"
 
 import { clock } from "~lib/format"
@@ -19,6 +18,7 @@ const ACTIVITY: Record<ActivityKind, { label: string; state: ActionLogItem["stat
 const TITLE_LENGTH = 48
 
 export function campaignTitle(campaign: Campaign): string {
+  if (campaign.title?.trim()) return campaign.title.trim()
   const firstLine = campaign.sourceTweet.text?.split("\n").find((line) => line.trim())?.trim()
   if (!firstLine) return `Campagne ${campaign.keyword}`
   return firstLine.length > TITLE_LENGTH ? `${firstLine.slice(0, TITLE_LENGTH - 1).trimEnd()}…` : firstLine
@@ -33,7 +33,7 @@ function log(activity: ActivityEntry[], campaignId: string): ActionLogItem[] {
 }
 
 /** What the side panel shows, derived from the engine's persisted state. */
-export function project(state: EngineState, input: { entitlement: Entitlement | null; config: RemoteConfig; now: number }): PanelState {
+export function project(state: EngineState, input: { config: Config; now: number }): PanelState {
   const { config, now } = input
   const campaigns: CampaignView[] = state.campaigns.map((c) => {
     const leads = state.leads.filter((l) => l.campaignId === c.id)
@@ -56,14 +56,12 @@ export function project(state: EngineState, input: { entitlement: Entitlement | 
 
   const titles = new Map(campaigns.map((c) => [c.id, c.title]))
   const usage = quotaUsage(state.history, now, config.limits[state.account.tier])
-  const entitlement: Entitlement = input.entitlement ?? { kind: "none", trialAvailable: false }
 
   return {
-    account: { handle: state.account.handle, name: state.account.name },
-    entitlement: {
-      kind: entitlement.kind,
-      trialAvailable: entitlement.trialAvailable,
-      ...(entitlement.trialEndsAt === undefined ? {} : { trialEndsAt: entitlement.trialEndsAt }),
+    account: {
+      handle: state.account.handle,
+      name: state.account.name,
+      ...(state.account.avatar ? { avatar: state.account.avatar } : {}),
     },
     tosAccepted: state.tosAccepted,
     breaker: state.breaker

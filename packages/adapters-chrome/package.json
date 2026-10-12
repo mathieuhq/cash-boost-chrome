@@ -13,10 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@super-x/adapters-backend": "workspace:*",
-    "@super-x/application": "workspace:*",
-    "@super-x/contracts": "workspace:*",
-    "zod": "4.6.5"
+    "@super-x/application": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "0.3.0",

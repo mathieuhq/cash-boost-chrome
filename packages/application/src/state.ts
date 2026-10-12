@@ -6,7 +6,6 @@ export type BreakerReason =
   | "kill_switch"
   | "x_restriction"
   | "session_expired"
-  | "remote_kill"
   | "xchat_locked"
   | "xchat_unavailable"
 

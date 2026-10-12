@@ -1,4 +1,4 @@
-// Last-resort values when neither RemoteConfig nor the page's bundle provide them.
+// Last-resort values when neither the Config nor the page's bundle provide them.
 // Observed on 2026-10-11 (docs/research/x-internal-api.md); queryIds rotate every few weeks.
 
 export type OperationName = "Viewer" | "TweetDetail" | "FavoriteTweet" | "CreateTweet"

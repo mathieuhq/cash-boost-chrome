@@ -3,7 +3,7 @@ import { useState } from "react"
 import { initials } from "~lib/format"
 import { cn } from "~lib/utils"
 
-/** Initials, or the picture when given (Google account, Lead's X profile). Falls back to initials if the image fails. */
+/** Initials, or the picture when given (X profile). Falls back to initials if the image fails. */
 export function Avatar({
   name,
   src,

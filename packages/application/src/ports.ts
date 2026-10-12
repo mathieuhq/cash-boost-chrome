@@ -1,6 +1,6 @@
-import type { Entitlement, RemoteConfig } from "@super-x/contracts"
 import type { AccountTier, Random, XUser } from "@super-x/domain"
 
+import type { Config } from "./config"
 import type { EngineState } from "./state"
 
 /** The X account the browser is logged into. */
@@ -46,7 +46,7 @@ export type XErrorKind =
 export class XError extends Error {
   constructor(
     readonly kind: XErrorKind,
-    /** Short code reported to the backend without any content (e.g. "http_429", "x_226"). */
+    /** Short code without any content (e.g. "http_429", "x_226"). */
     readonly code: string,
     message?: string
   ) {
@@ -75,26 +75,19 @@ export interface XGateway {
 }
 
 export class ClassifierUnavailable extends Error {
-  constructor(readonly reason: "cap" | "unavailable" | "unauthorized") {
+  constructor(readonly reason: "no_key" | "unauthorized" | "unavailable") {
     super(`classifier ${reason}`)
     this.name = "ClassifierUnavailable"
   }
 }
 
-/** Jev through the backend proxy (ADR 0006). */
+/** Jev, called with the user's OpenRouter key (ADR 0006). */
 export interface Classifier {
   classify(keyword: string, comments: { id: string; text: string }[]): Promise<{ id: string; probability: number }[]>
 }
 
-/** What the backend says about the Account, with the 24 h recheck / 72 h tolerance applied by the adapter. */
-export interface AccessGateway {
-  /** null when signed out or when the last successful check is older than the tolerance. */
-  current(): Promise<Entitlement | null>
-  startTrial(xUserId: string): Promise<Entitlement>
-}
-
 export interface ConfigSource {
-  get(): Promise<RemoteConfig>
+  get(): Promise<Config>
 }
 
 export interface StateStore {
@@ -114,20 +107,13 @@ export interface Clock {
   now(): number
 }
 
-/** Counts X error codes (no content) for the backend. */
-export interface ErrorReporter {
-  record(code: string): void
-}
-
 export interface EngineDeps {
   x: XGateway
   classifier: Classifier
-  access: AccessGateway
   config: ConfigSource
   store: StateStore
   scheduler: Scheduler
   clock: Clock
   random: Random
   ids: () => string
-  reporter: ErrorReporter
 }

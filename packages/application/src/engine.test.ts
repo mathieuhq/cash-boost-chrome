@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { Engine, type CampaignInput } from "./engine"
-import { XError } from "./ports"
+import { ClassifierUnavailable, XError } from "./ports"
 import { fakeDeps, ME, TEST_TEMPLATES } from "./testing"
 
 const MIN = 60_000
@@ -106,20 +106,19 @@ describe("launchCampaign", () => {
     expect(await engine.launchCampaign(input())).toEqual({ ok: false, error: "tos_not_accepted" })
   })
 
+  it("keeps the title chosen by the user, trimmed, and none when it is blank", async () => {
+    const { deps, engine } = await setup()
+    await engine.launchCampaign(input({ title: "  Template Notion  " }))
+    await engine.launchCampaign(input({ title: "   " }))
+    const [blank, titled] = deps.store.state.campaigns
+    expect(titled!.title).toBe("Template Notion")
+    expect(blank).not.toHaveProperty("title")
+  })
+
   it("allows 3 active Campaigns at most", async () => {
     const { engine } = await setup()
     for (let i = 0; i < 3; i++) expect((await engine.launchCampaign(input())).ok).toBe(true)
     expect(await engine.launchCampaign(input())).toEqual({ ok: false, error: "too_many_campaigns" })
-  })
-
-  it("starts the Trial on the first Campaign, once", async () => {
-    const { deps, engine } = await setup()
-    deps.access.entitlement = { kind: "none", trialAvailable: true }
-    expect((await engine.launchCampaign(input())).ok).toBe(true)
-    expect(deps.access.trialsStarted).toEqual([ME.id])
-
-    deps.access.entitlement = { kind: "none", trialAvailable: false }
-    expect(await engine.launchCampaign(input())).toEqual({ ok: false, error: "no_entitlement" })
   })
 })
 
@@ -176,17 +175,19 @@ describe("tick: scanning Comments", () => {
     expect(ctx.deps.store.state.leads).toHaveLength(1)
   })
 
-  it("leaves Comments for the next Tick when Jev is unavailable", async () => {
+  it("keeps exact matches and leaves the other Comments for the next Tick without an OpenRouter key", async () => {
     const ctx = await withCampaign()
     ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "je veux", author: author("1") })
-    ctx.deps.classifier.unavailable = new (await import("./ports")).ClassifierUnavailable("unavailable")
+    ctx.deps.x.addReply(TWEET.id, { id: "r2", text: "GUIDE", author: author("2") })
+    ctx.deps.classifier.unavailable = new ClassifierUnavailable("no_key")
     await ctx.engine.tick()
-    expect(ctx.deps.store.state.campaigns[0]!.seenCommentIds).toEqual([])
+    expect(ctx.deps.store.state.campaigns[0]!.seenCommentIds).toEqual(["r2"])
+    expect(ctx.deps.store.state.leads).toHaveLength(1)
 
     ctx.deps.classifier.unavailable = null
     ctx.deps.classifier.probabilities.set("je veux", 0.8)
     await ctx.engine.tick()
-    expect(ctx.deps.store.state.leads).toHaveLength(1)
+    expect(ctx.deps.store.state.leads).toHaveLength(2)
   })
 
   it("finishes Campaigns past their duration", async () => {
@@ -381,8 +382,7 @@ describe("act: processing Leads", () => {
       ctx.deps.clock.advance(2 * MIN)
       await ctx.engine.act()
     }
-    expect(ctx.deps.store.state.leads[0]).toMatchObject({ delivery: "failed" })
-    expect(ctx.deps.reporter.codes).toEqual(["http_500", "http_500", "http_500"])
+    expect(ctx.deps.store.state.leads[0]).toMatchObject({ delivery: "failed", failure: "http_500" })
   })
 })
 
@@ -426,7 +426,6 @@ describe("CircuitBreaker", () => {
     ctx.deps.x.failNext = new XError("xchat_unavailable", "xchat_no_composer")
     await ctx.engine.act()
     expect(ctx.deps.store.state.breaker).toMatchObject({ reason: "xchat_unavailable", code: "xchat_no_composer" })
-    expect(ctx.deps.reporter.codes).toEqual(["xchat_no_composer"])
   })
 
   it("trips on a restriction while scanning", async () => {
@@ -460,16 +459,6 @@ describe("CircuitBreaker", () => {
     expect([status(ctx.campaignId), status(second.campaignId)]).toEqual(["paused", "paused"])
     await ctx.engine.restart()
     expect([status(ctx.campaignId), status(second.campaignId)]).toEqual(["active", "paused"])
-  })
-
-  it("obeys the remote kill switch", async () => {
-    const ctx = await withCampaign()
-    ctx.deps.config.config.killSwitch = true
-    await ctx.engine.tick()
-    expect(ctx.deps.store.state.breaker?.reason).toBe("remote_kill")
-    ctx.deps.config.config.killSwitch = false
-    await ctx.engine.tick()
-    expect(ctx.deps.store.state.breaker).toBeNull()
   })
 })
 
@@ -523,19 +512,6 @@ describe("deleteCampaign", () => {
 
     await ctx.engine.deleteCampaign(ctx.campaignId)
     expect((await ctx.engine.launchCampaign(fourth)).ok).toBe(true)
-  })
-})
-
-describe("access", () => {
-  it("pauses Campaigns when the Entitlement ends and resumes them when it comes back", async () => {
-    const ctx = await withCampaign()
-    ctx.deps.access.entitlement = { kind: "none", trialAvailable: false }
-    await ctx.engine.tick()
-    expect(ctx.deps.store.state.campaigns[0]).toMatchObject({ status: "paused", stoppedBy: "access" })
-
-    ctx.deps.access.entitlement = { kind: "paid", trialAvailable: false }
-    await ctx.engine.tick()
-    expect(ctx.deps.store.state.campaigns[0]!.status).toBe("active")
   })
 })
 

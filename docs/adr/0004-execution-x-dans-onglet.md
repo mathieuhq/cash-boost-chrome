@@ -9,7 +9,7 @@ Pas d'API officielle. X exige `x-client-transaction-id` (généré par son JS), 
 - Les appels aux endpoints internes (`TweetDetail`, `FavoriteTweet`, `CreateTweet`, DM) s'exécutent dans un content script MAIN world sur x.com.
 - Le service worker orchestre : alarmes (`chrome.alarms`, ticks idempotents), état dans `chrome.storage.local`, quotas, file.
 - Sans onglet x.com ouvert, l'extension ouvre un onglet épinglé en arrière-plan.
-- queryIds et features viennent de la RemoteConfig (backend), avec repli sur une découverte depuis le trafic de la page.
+- queryIds et features viennent de la Config livrée avec l'extension (ADR 0010), avec repli sur une découverte depuis le trafic de la page.
 
 ## Mise à jour (2026-10-12)
 X Chat (chiffré E2E) depuis nov. 2025 : l’envoi de DM passe par l’interface XChat, voir ADR 0009.

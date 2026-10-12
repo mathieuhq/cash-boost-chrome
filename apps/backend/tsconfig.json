@@ -1,5 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "noEmit": true, "lib": ["ES2023", "DOM", "DOM.Iterable"], "types": ["node"] },
-  "include": ["src", "scripts", "drizzle.config.ts", "vitest.config.ts"]
-}

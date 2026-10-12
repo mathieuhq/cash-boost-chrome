@@ -14,10 +14,6 @@ const STATUS = {
   failed: ["destructive", "Échec", false],
   pending: ["brand", "À valider", false],
   rejected: ["neutral", "Ignoré", false],
-  student: ["success", "Élève", false],
-  trial: ["outline", "Essai", false],
-  paid: ["success", "Licence", false],
-  none: ["destructive", "Sans accès", false],
 } as const satisfies Record<string, readonly [Variant, string, boolean]>
 
 export type DomainStatus = keyof typeof STATUS

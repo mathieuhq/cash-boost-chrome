@@ -3,7 +3,6 @@
 export type CampaignStatus = "active" | "paused" | "finished"
 export type DeliveryStatus = "queued" | "sent" | "dm_closed" | "failed"
 export type ActionState = "done" | "current" | "queued" | "waiting" | "failed"
-export type EntitlementKind = "student" | "trial" | "paid" | "none"
 
 export interface ActionLogItem {
   label: string
@@ -30,8 +29,8 @@ export interface CampaignView {
   queued: number
   endsAt: number
   log: ActionLogItem[]
-  /** Paused by the system (CircuitBreaker or end of access), not by the user. */
-  stoppedBy?: "breaker" | "access"
+  /** Paused by the CircuitBreaker, not by the user. */
+  stoppedBy?: "breaker"
 }
 
 export interface PendingReviewView {
@@ -71,7 +70,7 @@ export interface Quotas {
 }
 
 export interface CircuitBreakerView {
-  reason: "kill_switch" | "x_restriction" | "session_expired" | "remote_kill" | "xchat_locked" | "xchat_unavailable"
+  reason: "kill_switch" | "x_restriction" | "session_expired" | "xchat_locked" | "xchat_unavailable"
   code?: string
   /** When the breaker tripped (epoch ms). */
   at: number
@@ -84,7 +83,15 @@ export interface TickView {
   lastDmAt?: number
 }
 
+/** Set once in the Options tab, applied to every new Campaign. */
+export interface CampaignDefaults {
+  templates: MessageTemplates
+  mustFollow: boolean
+  durationHours: number
+}
+
 export interface CampaignDraft {
+  title: string
   tweetUrl: string
   keyword: string
   leadMagnetUrl: string
@@ -96,8 +103,7 @@ export interface CampaignDraft {
 }
 
 export interface PanelState {
-  account: { handle: string; name: string }
-  entitlement: { kind: EntitlementKind; trialEndsAt?: number; trialAvailable: boolean }
+  account: { handle: string; name: string; avatar?: string }
   tosAccepted: boolean
   breaker: CircuitBreakerView | null
   campaigns: CampaignView[]

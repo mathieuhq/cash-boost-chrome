@@ -1,13 +1,10 @@
-import { AtSign, ShieldAlert, Zap } from "lucide-react"
+import { AtSign, Zap } from "lucide-react"
 import { useId, useState } from "react"
 
 import { EmptyState } from "~components/sx/empty-state"
-import { Headline } from "~components/sx/headline"
-import { Alert, AlertActions, AlertDescription, AlertTitle } from "~components/ui/alert"
 import { Button } from "~components/ui/button"
 import { Input } from "~components/ui/input"
 import { Label } from "~components/ui/label"
-import { TEST_AUTH } from "~env"
 import type { Command } from "~messages"
 
 import { errorMessage } from "./errors"
@@ -31,34 +28,6 @@ export function useCommand() {
 
 function GateLayout({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-col gap-6 px-4 pt-6">{children}</div>
-}
-
-export function SignInGate() {
-  const { replaced } = usePanel()
-  const { busy, error, run } = useCommand()
-  return (
-    <GateLayout>
-      <Headline title="Tes lead magnets livrés en DM," accent="pendant que tu postes.">
-        Connecte-toi pour lancer ta première campagne. Les élèves Growth Boost ont accès gratuitement ; sinon, 3 jours
-        d'essai sans carte.
-      </Headline>
-      {replaced && (
-        <Alert variant="warning">
-          <ShieldAlert />
-          <AlertTitle>Cash Boost tourne maintenant sur un autre navigateur.</AlertTitle>
-          <AlertDescription>
-            Une licence vaut pour un navigateur à la fois. Reconnecte-toi ici pour reprendre la main.
-          </AlertDescription>
-        </Alert>
-      )}
-      <div className="flex flex-col gap-2">
-        <Button block disabled={busy} onClick={() => run({ type: "signIn" })}>
-          {busy ? "Connexion…" : TEST_AUTH ? "Se connecter (compte de test)" : "Se connecter avec Google"}
-        </Button>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-      </div>
-    </GateLayout>
-  )
 }
 
 export function ConnectXGate() {
@@ -88,122 +57,57 @@ export function LoadingGate() {
   )
 }
 
-/** Shown above the panel when the Trial is over (or access was revoked): Campaigns are paused, data is kept. */
-export function PaywallAlert() {
-  const checkout = useCommand()
-  const [student, setStudent] = useState(false)
-  return (
-    <Alert variant="warning">
-      <ShieldAlert />
-      <AlertTitle>Ton accès est terminé.</AlertTitle>
-      <AlertDescription>
-        Tes campagnes sont en pause et tes leads restent ici. La licence coûte 99 € une fois, mises à jour comprises.
-      </AlertDescription>
-      <AlertActions className="justify-between">
-        <Button size="xs" variant="ghost" onClick={() => setStudent((open) => !open)}>
-          Je suis élève
-        </Button>
-        <Button size="xs" disabled={checkout.busy} onClick={() => checkout.run({ type: "checkout" })}>
-          Licence à vie · 99 €
-        </Button>
-      </AlertActions>
-      {checkout.error && <p className="col-span-full mt-2 text-xs text-destructive">{checkout.error}</p>}
-      {student && (
-        <div className="col-span-full mt-3">
-          <StudentLinkForm />
-        </div>
-      )}
-    </Alert>
-  )
-}
-
 /**
- * Growth Boost students enter their purchase email, then the code emailed to it; the backend then
- * locks that email to this Account.
+ * The user's OpenRouter key, for Jev. It stays in chrome.storage.local and only goes to openrouter.ai;
+ * the panel never reads it back, it only knows whether one is set.
  */
-export function StudentLinkForm() {
-  const request = useCommand()
-  const verify = useCommand()
-  const [email, setEmail] = useState("")
-  const [code, setCode] = useState("")
-  const [sentTo, setSentTo] = useState<string>()
+export function OpenRouterKeyForm() {
+  const { hasOpenRouterKey } = usePanel()
+  const save = useCommand()
+  const [key, setKey] = useState("")
   const inputId = useId()
 
-  if (!sentTo) {
+  if (hasOpenRouterKey) {
     return (
-      <form
-        className="flex flex-col gap-1.5"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          const address = email.trim()
-          if (await request.run({ type: "linkStudent", email: address })) setSentTo(address)
-        }}>
-        <Label htmlFor={inputId} className="text-xs">
-          Élève Growth Boost ? Ton email d'achat
-        </Label>
-        <Input
-          id={inputId}
-          type="email"
-          required
-          autoComplete="email"
-          placeholder="toi@exemple.fr"
-          value={email}
-          aria-invalid={request.error ? true : undefined}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        <Button size="xs" type="submit" disabled={request.busy || !email.trim()}>
-          {request.busy ? "Vérification…" : "Recevoir un code"}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[13px] leading-[14px] font-medium">Clé OpenRouter enregistrée</span>
+        <Button
+          size="xs"
+          variant="ghost"
+          disabled={save.busy}
+          onClick={() => save.run({ type: "setOpenRouterKey", key: null })}>
+          Retirer
         </Button>
-        {request.error ? (
-          <span className="text-xs text-destructive">{request.error}</span>
-        ) : (
-          <span className="text-center text-xs text-muted-foreground">L'achat sera lié à ce compte Google.</span>
-        )}
-      </form>
+      </div>
     )
   }
 
   return (
     <form
-      className="flex flex-col gap-1.5"
-      onSubmit={(event) => {
+      className="flex flex-col gap-2"
+      onSubmit={async (event) => {
         event.preventDefault()
-        void verify.run({ type: "verifyStudent", code })
+        if (await save.run({ type: "setOpenRouterKey", key: key.trim() })) setKey("")
       }}>
-      <Label htmlFor={inputId} className="text-xs">
-        Code envoyé à {sentTo}
+      <Label htmlFor={inputId} className="text-[13px] leading-[14px]">
+        Clé OpenRouter
       </Label>
       <Input
         id={inputId}
         mono
         required
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        pattern="\d{6}"
-        placeholder="123456"
-        className="tracking-[0.3em]"
-        value={code}
-        aria-invalid={verify.error ? true : undefined}
-        onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+        type="password"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder="sk-or-…"
+        value={key}
+        aria-invalid={save.error ? true : undefined}
+        onChange={(event) => setKey(event.target.value)}
       />
-      <Button size="xs" type="submit" disabled={verify.busy || code.length !== 6}>
-        {verify.busy ? "Vérification…" : "Lier mon achat"}
+      <Button size="xs" type="submit" disabled={save.busy || !key.trim()}>
+        Enregistrer
       </Button>
-      {verify.error ? (
-        <span className="text-xs text-destructive">{verify.error}</span>
-      ) : (
-        <span className="text-xs text-muted-foreground">Valable 15 minutes. Pense à regarder tes spams.</span>
-      )}
-      <Button
-        size="xs"
-        type="button"
-        variant="ghost"
-        onClick={() => {
-          setSentTo(undefined)
-          setCode("")
-        }}>
-        Changer d'email ou renvoyer le code
-      </Button>
+      {save.error && <span className="text-xs text-destructive">{save.error}</span>}
     </form>
   )
 }

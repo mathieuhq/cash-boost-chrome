@@ -1,13 +1,12 @@
 // Commands sent by the side panel to the service worker, which owns the engine (ADR 0002).
 import type { CampaignInput } from "@super-x/application"
 
+import type { CampaignDefaults } from "~sidepanel/model"
+
 export type Command =
-  | { type: "signIn" }
-  | { type: "signOut" }
-  | { type: "refreshAccess" }
-  | { type: "linkStudent"; email: string }
-  | { type: "verifyStudent"; code: string }
-  | { type: "checkout" }
+  /** null removes the key. */
+  | { type: "setOpenRouterKey"; key: string | null }
+  | { type: "setCampaignDefaults"; defaults: CampaignDefaults }
   | { type: "connectX" }
   | { type: "acceptTos" }
   | { type: "launch"; input: CampaignInput }

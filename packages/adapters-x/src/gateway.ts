@@ -1,5 +1,4 @@
-import type { RemoteConfig } from "@super-x/contracts"
-import { XError, type ConfigSource, type Relationship, type Reply, type Tweet, type XAccount, type XGateway } from "@super-x/application"
+import { XError, type Config, type ConfigSource, type Relationship, type Reply, type Tweet, type XAccount, type XGateway } from "@super-x/application"
 import { containsLink } from "@super-x/domain"
 
 import { DEFAULT_FEATURES, DEFAULT_FIELD_TOGGLES, DEFAULT_QUERY_IDS, type OperationName } from "./defaults"
@@ -241,7 +240,7 @@ export class XWebGateway implements XGateway {
     conversationId: string,
     text: string,
     links: readonly string[],
-    selectors: RemoteConfig["x"]["xchat"]
+    selectors: Config["x"]["xchat"]
   ): Promise<"sent" | "already_sent"> {
     if (!this.chat) throw new XError("xchat_unavailable", "xchat_no_tab")
     await this.chat.open(`https://x.com/i/chat/${conversationId}`)

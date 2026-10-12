@@ -13,7 +13,7 @@ L'utilisateur gère aussi des commentaires à la main : like, réponse « dans t
 - Lien comparé sans schéma, sans `www.`, sans paramètres de suivi ni `/` final ; les « anciens liens » de la Campaign comptent aussi. Un autre lead magnet est toujours envoyé.
 - Ordre : DMs (lecture puis envoi) → like → réponse « dans tes DMs ». Lien déjà présent : like + réponse, sans renvoi.
 - Envoi par l'interface XChat (`dmMode: "xchat_ui"`) dans un **onglet épinglé dédié** : ouverture directe de `/i/chat/<id bas>-<id haut>`, saisie par le setter natif du textarea + événement `input`, clic sur Envoyer, attente de `data-send-status="sent"`. Non confirmé → erreur transitoire ; la tentative suivante relit les DMs, donc pas de doublon.
-- Repères `data-testid` de XChat (shadow root ouvert) dans la RemoteConfig (`x.xchat`).
+- Repères `data-testid` de XChat (shadow root ouvert) dans la Config livrée avec l'extension (`x.xchat`, ADR 0010).
 - Pas de lecture possible = pas d'envoi : XChat verrouillé par le code → CircuitBreaker `xchat_locked` (« Déverrouille XChat ») ; repère introuvable → `xchat_unavailable`. Les deux mettent toutes les Campaigns en pause, relance manuelle.
 - Pas de Jev pour trouver les boutons : un mauvais clic coûte plus cher qu'une pause.
 

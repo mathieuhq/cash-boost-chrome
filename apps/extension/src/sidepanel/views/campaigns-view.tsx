@@ -11,14 +11,11 @@ import { plural } from "~lib/format"
 
 import { MAX_ACTIVE_CAMPAIGNS, type PanelState } from "../model"
 import { errorMessage } from "../errors"
-import { useEngine } from "../store"
+import { useEngine, usePanel } from "../store"
 
 function blockedReason(state: PanelState, running: number): string | undefined {
   if (state.breaker) return "Relance les campagnes pour en créer une nouvelle."
   if (!state.tosAccepted) return "Accepte l'avertissement ci-dessus pour lancer une campagne."
-  if (state.entitlement.kind === "none" && !state.entitlement.trialAvailable) {
-    return "Ton accès est terminé : prends la licence ou lie ton compte élève."
-  }
   if (running >= MAX_ACTIVE_CAMPAIGNS) return "3 campagnes en cours au maximum : mets-en une en pause."
   return undefined
 }
@@ -26,6 +23,7 @@ function blockedReason(state: PanelState, running: number): string | undefined {
 export const CampaignsView = forwardRef<HTMLTextAreaElement, { now: number }>(
   function CampaignsView({ now }, composerRef) {
     const { state, send } = useEngine()
+    const { defaults } = usePanel()
     const current = state.campaigns.filter((c) => c.status !== "finished")
     const running = current.filter((c) => c.status === "active").length
     const delivered = state.campaigns.reduce((sum, c) => sum + c.sent, 0)
@@ -47,10 +45,11 @@ export const CampaignsView = forwardRef<HTMLTextAreaElement, { now: number }>(
           <Composer
             ref={composerRef}
             blockedReason={blockedReason(state, current.length)}
+            defaults={defaults}
             onLaunch={async (draft) => {
               const result = await send({ type: "launch", input: draft })
               if (!result.ok) return errorMessage(result.error)
-              notify({ children: `Campagne ${draft.keyword} lancée` })
+              notify({ children: draft.title ? `Campagne « ${draft.title} » lancée` : `Campagne ${draft.keyword} lancée` })
               return undefined
             }}
           />

@@ -20,7 +20,7 @@ const DAY = 24 * HOUR
 /** Rolling windows: DMs and replies per day, likes per hour. */
 export const QUOTA_WINDOW: Record<ActionKind, number> = { dm: DAY, like: HOUR, reply: DAY }
 
-/** SPEC defaults; RemoteConfig may lower or raise them per tier. */
+/** SPEC defaults; the Config may lower or raise them per tier. */
 export const DEFAULT_LIMITS: Record<AccountTier, QuotaLimits> = {
   free: { dm: 20, like: 30, reply: 100 },
   premium: { dm: 60, like: 30, reply: 100 },

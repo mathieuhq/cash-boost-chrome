@@ -20,3 +20,6 @@ La règle de dépendance (vers l'intérieur uniquement) est vérifiée en CI par
 ## Conséquences
 - Plasmo, Chrome, X, Better Auth, Drizzle, Stripe, OpenRouter restent dans le cercle extérieur, derrière des ports.
 - Le cœur est testable sans navigateur ni réseau.
+
+## Mise à jour (2026-10-12)
+Sans backend (ADR 0010) : `apps/backend`, `packages/contracts` et `packages/adapters-backend` sont supprimés, `packages/adapters-openrouter` (classification Jev) est ajouté. Restent `apps/extension` et `packages/{domain,application,adapters-x,adapters-chrome,adapters-openrouter}`.

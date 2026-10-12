@@ -21,16 +21,6 @@
       ],
       "port": 4179,
       "autoPort": true
-    },
-    {
-      "name": "backend",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "--filter",
-        "@super-x/backend",
-        "dev"
-      ],
-      "port": 8787
     }
   ]
 }

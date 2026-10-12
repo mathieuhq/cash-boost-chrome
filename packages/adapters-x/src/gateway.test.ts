@@ -1,4 +1,4 @@
-import { DEFAULT_REMOTE_CONFIG, type RemoteConfig } from "@super-x/contracts"
+import { DEFAULT_CONFIG, type Config } from "@super-x/application"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import detail from "./__fixtures__/tweet-detail.json"
@@ -55,8 +55,8 @@ class FakeChat implements ChatPage {
 let bridge: FakeBridge
 let chat: FakeChat
 let gateway: XWebGateway
-let remote: RemoteConfig
-const config = { get: async () => remote }
+let settings: Config
+const config = { get: async () => settings }
 
 beforeEach(() => {
   bridge = new FakeBridge()
@@ -65,7 +65,7 @@ beforeEach(() => {
     run: async (func, args) => func(...args) as never,
     reload: async () => undefined,
   }
-  remote = structuredClone(DEFAULT_REMOTE_CONFIG)
+  settings = structuredClone(DEFAULT_CONFIG)
   chat = new FakeChat()
   gateway = new XWebGateway(runner, config, chat)
 })
@@ -137,14 +137,14 @@ describe("XWebGateway", () => {
   })
 
   it("sends a 1:1 legacy DM on the numerically sorted conversation id", async () => {
-    remote.x.dmMode = "api"
+    settings.x.dmMode = "api"
     bridge.on((r) => r.path.endsWith("new2.json"), { status: 200, json: { entries: [{ message: { id: "1" } }] } })
     await gateway.sendDm("99", "Salut", [])
     expect(bridge.requests[0]!.body).toMatchObject({ conversation_id: "99-111", text: "Salut", recipient_ids: false })
   })
 
   it("maps a refused legacy DM to dm_closed", async () => {
-    remote.x.dmMode = "api"
+    settings.x.dmMode = "api"
     bridge.on((r) => r.path.endsWith("new2.json"), { status: 403, json: { errors: [{ code: 349 }] } })
     await expect(gateway.sendDm("222", "Salut", [])).rejects.toMatchObject({ kind: "dm_closed" })
   })

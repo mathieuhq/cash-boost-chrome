@@ -14,8 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@super-x/domain": "workspace:*",
-    "@super-x/contracts": "workspace:*"
+    "@super-x/domain": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3",

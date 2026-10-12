@@ -1,5 +1,4 @@
-import { emptyState } from "@super-x/application"
-import { DEFAULT_REMOTE_CONFIG } from "@super-x/contracts"
+import { DEFAULT_CONFIG, emptyState } from "@super-x/application"
 import { newLead, type Campaign } from "@super-x/domain"
 import { describe, expect, it } from "vitest"
 
@@ -33,6 +32,10 @@ describe("campaignTitle", () => {
     expect(campaignTitle(campaign())).toBe("J'offre mon template Notion.")
   })
 
+  it("prefers the title chosen by the user", () => {
+    expect(campaignTitle(campaign({ title: "  Template Notion  " }))).toBe("Template Notion")
+  })
+
   it("falls back to the Keyword", () => {
     expect(campaignTitle(campaign({ sourceTweet: { ...campaign().sourceTweet, text: "" } }))).toBe("Campagne GUIDE")
   })
@@ -46,10 +49,9 @@ describe("project", () => {
     state.history = [{ kind: "dm", at: now - 1000 }]
     state.activity = [{ campaignId: "c1", handle: "h1", kind: "dm", at: now }]
 
-    const view = project(state, { entitlement: { kind: "trial", trialEndsAt: now + 1, trialAvailable: false }, config: DEFAULT_REMOTE_CONFIG, now })
+    const view = project(state, { config: DEFAULT_CONFIG, now })
     expect(view.campaigns[0]).toMatchObject({ leads: 2, sent: 1, queued: 1, log: [{ label: "DM envoyé · @h1", state: "done" }] })
     expect(view.quotas.dms).toEqual({ used: 1, limit: 20 })
-    expect(view.entitlement).toEqual({ kind: "trial", trialEndsAt: now + 1, trialAvailable: false })
     expect(view.leads.map((l) => l.status)).toEqual(["sent", "queued"])
   })
 
@@ -57,7 +59,7 @@ describe("project", () => {
     const state = emptyState({ id: "100", handle: "me", name: "Moi", tier: "free" })
     state.archive = [{ campaign: campaign({ id: "old" }), leads: [lead("9", { campaignId: "old", delivery: "sent", deliveredAt: now })], deletedAt: now }]
 
-    const view = project(state, { entitlement: null, config: DEFAULT_REMOTE_CONFIG, now })
+    const view = project(state, { config: DEFAULT_CONFIG, now })
     expect(view.campaigns).toEqual([])
     expect(view.leads).toEqual([expect.objectContaining({ handle: "h9", campaign: "J'offre mon template Notion.", archived: true })])
   })
@@ -65,6 +67,6 @@ describe("project", () => {
   it("reads states saved before the archive existed", () => {
     const state = emptyState({ id: "100", handle: "me", name: "Moi", tier: "free" })
     delete state.archive
-    expect(project(state, { entitlement: null, config: DEFAULT_REMOTE_CONFIG, now }).leads).toEqual([])
+    expect(project(state, { config: DEFAULT_CONFIG, now }).leads).toEqual([])
   })
 })

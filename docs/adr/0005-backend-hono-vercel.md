@@ -1,6 +1,6 @@
 # 0005 — Backend Hono + Better Auth + Postgres sur Vercel
 
-**Statut** : accepté — 2026-10-11 (Firebase envisagé puis écarté)
+**Statut** : remplacé par l'ADR 0010 — 2026-10-12 (accepté le 2026-10-11 ; Firebase envisagé puis écarté)
 
 ## Décision
 - Hono sur Vercel Functions (région `cdg1`).

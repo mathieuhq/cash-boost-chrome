@@ -1,4 +1,4 @@
-// User-facing copy for command errors (engine, backend, sign-in).
+// User-facing copy for command errors.
 const MESSAGES: Record<string, string> = {
   invalid_tweet_url: "Colle l'URL d'un tweet x.com (…/status/…).",
   invalid_draft: "Vérifie le mot-clé, le lien et les messages.",
@@ -10,18 +10,8 @@ const MESSAGES: Record<string, string> = {
   too_many_campaigns: "3 campagnes en cours au maximum : mets-en une en pause.",
   tweet_not_found: "Ce tweet est introuvable.",
   not_your_tweet: "Ce tweet n'est pas à toi : choisis un tweet du compte connecté.",
-  no_entitlement: "Ton accès a pris fin : passe à la licence pour continuer.",
   finished: "Cette campagne est terminée.",
-  too_early: "X a limité ton compte : attends 24 h avant de relancer.",
-  remote_kill: "Cash Boost a suspendu les campagnes pour tout le monde. Reprise dès que possible.",
-  cancelled: "Connexion annulée.",
-  browser_change_limit: "Trop de changements de navigateur cette semaine. Réessaie plus tard.",
-  student_not_found: "Aucun achat Growth Boost avec cet email.",
-  student_email_taken: "Cet achat est déjà lié à un autre compte. Écris-nous si ce n'est pas toi.",
-  student_already_linked: "Ton compte est déjà lié à un autre email d'achat.",
-  student_link_limit: "Trop d'essais. Réessaie dans une heure.",
-  student_code_invalid: "Code incorrect ou expiré.",
-  network: "Serveur injoignable, réessaie plus tard.",
+  too_early: "X a limité ton compte : attends 24h avant de relancer.",
 }
 
 export function errorMessage(code: string): string {

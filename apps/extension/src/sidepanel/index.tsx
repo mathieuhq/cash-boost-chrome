@@ -3,35 +3,31 @@ import "@fontsource/dm-mono/400.css"
 import "@fontsource/dm-mono/500.css"
 import "~style.generated.css"
 
-import { Gauge, Inbox, ShieldAlert, TriangleAlert, Users, Zap } from "lucide-react"
+import { Inbox, ShieldAlert, SlidersHorizontal, Users, Zap } from "lucide-react"
 import { Tabs as TabsPrimitive } from "radix-ui"
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
-import { Avatar } from "~components/sx/avatar"
 import { Logo } from "~components/sx/logo"
 import { NavTiles } from "~components/sx/nav-tiles"
 import { notify } from "~components/sx/toast-pill"
 import { Alert, AlertActions, AlertDescription, AlertTitle } from "~components/ui/alert"
 import { Badge } from "~components/ui/badge"
 import { Button } from "~components/ui/button"
-import { Checkbox } from "~components/ui/checkbox"
-import { Label } from "~components/ui/label"
-import { Popover, PopoverContent, PopoverTrigger } from "~components/ui/popover"
 import { Toaster } from "~components/ui/sonner"
-import { duration, plural } from "~lib/format"
+import { plural } from "~lib/format"
 import { useColorScheme } from "~lib/use-color-scheme"
 import { useNow } from "~lib/use-now"
 
 import { errorMessage } from "./errors"
-import { ConnectXGate, LoadingGate, PaywallAlert, SignInGate, StudentLinkForm, useCommand } from "./gates"
+import { ConnectXGate, LoadingGate } from "./gates"
 import type { CircuitBreakerView, PanelState } from "./model"
 import { PanelProvider, useEngine, usePanel } from "./store"
 import { CampaignsView } from "./views/campaigns-view"
 import { LeadsView } from "./views/leads-view"
-import { QuotasView } from "./views/quotas-view"
+import { OptionsView } from "./views/options-view"
 import { ReviewsView } from "./views/reviews-view"
 
-type Section = "campaigns" | "reviews" | "leads" | "quotas"
+type Section = "campaigns" | "reviews" | "leads" | "options"
 
 const RECENT_MS = 10 * 60_000
 const RESTRICTION_COOLDOWN = 24 * 3_600_000
@@ -54,8 +50,6 @@ function SidePanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const accessEnded = state.entitlement.kind === "none" && !state.entitlement.trialAvailable
-
   return (
     <>
       <header className="flex items-center justify-between gap-2 px-4 py-3">
@@ -63,10 +57,10 @@ function SidePanel() {
           <Logo />
           Cash Boost
         </div>
-        <AccountMenu state={state} now={now} />
+        <XAccountBadge state={state} />
       </header>
 
-      <TopAlert now={now} accessEnded={accessEnded} />
+      <TopAlert now={now} />
 
       <TabsPrimitive.Root value={section} onValueChange={(v) => setSection(v as Section)}>
         <NavTiles
@@ -80,7 +74,7 @@ function SidePanel() {
               count: state.reviews.length
             },
             { id: "leads", label: "Leads", icon: Users },
-            { id: "quotas", label: "Quotas", icon: Gauge }
+            { id: "options", label: "Options", icon: SlidersHorizontal }
           ]}
         />
         <div className="px-4 pt-6">
@@ -93,8 +87,8 @@ function SidePanel() {
           <TabsPrimitive.Content value="leads" className="outline-none">
             <LeadsView />
           </TabsPrimitive.Content>
-          <TabsPrimitive.Content value="quotas" className="outline-none">
-            <QuotasView />
+          <TabsPrimitive.Content value="options" className="outline-none">
+            <OptionsView />
           </TabsPrimitive.Content>
         </div>
       </TabsPrimitive.Root>
@@ -102,71 +96,16 @@ function SidePanel() {
   )
 }
 
-function EntitlementBadge({ state, now }: { state: PanelState; now: number }) {
-  const { kind, trialEndsAt } = state.entitlement
-  switch (kind) {
-    case "trial":
-      return (
-        <Badge variant="outline" size="sm">
-          Essai · {trialEndsAt ? duration(trialEndsAt - now) : "3 j"}
-        </Badge>
-      )
-    case "student":
-      return (
-        <Badge variant="success" size="sm">
-          Élève
-        </Badge>
-      )
-    case "paid":
-      return (
-        <Badge variant="success" size="sm">
-          Licence
-        </Badge>
-      )
-    case "none":
-      return state.entitlement.trialAvailable ? (
-        <Badge variant="outline" size="sm">
-          Essai 3 j
-        </Badge>
-      ) : (
-        <Badge variant="destructive" size="sm">
-          Sans accès
-        </Badge>
-      )
-  }
-}
-
-/** The avatar opens the account: Google email, access, X handle, student link, sign out. */
-function AccountMenu({ state, now }: { state: PanelState; now: number }) {
-  const { me } = usePanel()
-  const signOut = useCommand()
+/** The connected X account: handle and tier. */
+function XAccountBadge({ state }: { state: PanelState }) {
+  const premium = state.quotas.tier === "premium"
   return (
-    <Popover>
-      <PopoverTrigger
-        aria-label="Mon compte"
-        className="cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <Avatar name={me?.account.name || me?.account.email || "?"} src={me?.account.image} />
-      </PopoverTrigger>
-      <PopoverContent align="end" className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-[13px] font-medium">{me?.account.email}</span>
-            <EntitlementBadge state={state} now={now} />
-          </div>
-          <span className="text-mono text-muted-foreground">X · @{state.account.handle}</span>
-        </div>
-        {me?.studentEmail ? (
-          <span className="truncate text-xs text-muted-foreground">Achat Growth Boost · {me.studentEmail}</span>
-        ) : (
-          state.entitlement.kind !== "paid" && <StudentLinkForm />
-        )}
-        <div className="flex flex-col gap-1">
-          <Button size="xs" variant="ghost" disabled={signOut.busy} onClick={() => signOut.run({ type: "signOut" })}>
-            Se déconnecter
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="text-mono truncate text-muted-foreground">@{state.account.handle}</span>
+      <Badge variant={premium ? "brand" : "outline"} size="sm">
+        {premium ? "Premium" : "Gratuit"}
+      </Badge>
+    </div>
   )
 }
 
@@ -177,15 +116,11 @@ const BREAKER_COPY: Record<CircuitBreakerView["reason"], (code?: string) => [str
   ],
   x_restriction: (code) => [
     `X a limité ton compte${code ? ` (${code})` : ""}.`,
-    "Toutes les campagnes sont en pause. Reprise possible dans 24 h."
+    "Toutes les campagnes sont en pause. Reprise possible dans 24h."
   ],
   session_expired: () => [
     "Ta session X a expiré.",
     "Reconnecte-toi sur x.com : les campagnes reprendront au cycle suivant."
-  ],
-  remote_kill: () => [
-    "Cash Boost a suspendu les campagnes.",
-    "X a changé quelque chose : on corrige, et tout reprend seul dès que c'est réglé."
   ],
   xchat_locked: () => [
     "Déverrouille XChat.",
@@ -198,10 +133,8 @@ const BREAKER_COPY: Record<CircuitBreakerView["reason"], (code?: string) => [str
 }
 
 /** One Alert at a time between the bar and the nav; the destructive one wins. */
-function TopAlert({ now, accessEnded }: { now: number; accessEnded: boolean }) {
+function TopAlert({ now }: { now: number }) {
   const { state, send } = useEngine()
-  const [understood, setUnderstood] = useState(false)
-  const checkboxId = useId()
 
   if (state.breaker) {
     const [title, description] = BREAKER_COPY[state.breaker.reason](state.breaker.code)
@@ -233,32 +166,16 @@ function TopAlert({ now, accessEnded }: { now: number; accessEnded: boolean }) {
     )
   }
 
-  if (accessEnded) {
-    return (
-      <div className="px-4 pb-3">
-        <PaywallAlert />
-      </div>
-    )
-  }
-
   if (!state.tosAccepted) {
     return (
       <div className="px-4 pb-3">
         <Alert variant="warning">
-          <TriangleAlert />
-          <AlertTitle>Cash Boost agit avec ton compte X.</AlertTitle>
           <AlertDescription>
-            C'est contraire aux CGU de X : ton compte peut être limité ou suspendu. Les quotas réduisent ce risque, sans
-            l'annuler.
+            C'est contraire aux CGU de X : ton compte peut être limité ou suspendu, les quotas réduisent ce risque,
+            sans l'annuler.
           </AlertDescription>
-          <AlertActions className="justify-between">
-            <div className="flex items-center gap-2">
-              <Checkbox id={checkboxId} checked={understood} onCheckedChange={(v) => setUnderstood(v === true)} />
-              <Label htmlFor={checkboxId} className="text-xs font-normal">
-                J'accepte ce risque
-              </Label>
-            </div>
-            <Button size="xs" disabled={!understood} onClick={() => send({ type: "acceptTos" })}>
+          <AlertActions>
+            <Button size="xs" block onClick={() => send({ type: "acceptTos" })}>
               Continuer
             </Button>
           </AlertActions>
@@ -272,18 +189,17 @@ function TopAlert({ now, accessEnded }: { now: number; accessEnded: boolean }) {
 
 function Gates() {
   useColorScheme()
-  const { loaded, signedIn, me, state, send } = usePanel()
+  const { loaded, state, send } = usePanel()
 
   useEffect(() => {
-    if (signedIn && !me) send({ type: "refreshAccess" })
-    if (signedIn && !state) send({ type: "connectX" })
-    // Each time the sign-in state changes.
+    if (loaded && !state) send({ type: "connectX" })
+    // Once the storage is read.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signedIn])
+  }, [loaded])
 
   return (
     <div className="relative mx-auto min-h-screen w-full max-w-[500px] min-w-[320px] overflow-x-clip bg-background pb-20">
-      {!loaded ? <LoadingGate /> : !signedIn ? <SignInGate /> : !state ? <ConnectXGate /> : <SidePanel />}
+      {!loaded ? <LoadingGate /> : !state ? <ConnectXGate /> : <SidePanel />}
       <Toaster />
     </div>
   )

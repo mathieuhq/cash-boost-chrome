@@ -1,14 +1,11 @@
 // In-memory fakes of the ports (ADR 0003), shared by the application tests and the extension's tests.
-import { DEFAULT_REMOTE_CONFIG, type Entitlement, type RemoteConfig } from "@super-x/contracts"
-
+import { DEFAULT_CONFIG, type Config } from "../config"
 import {
   ClassifierUnavailable,
   XError,
-  type AccessGateway,
   type Classifier,
   type ConfigSource,
   type EngineDeps,
-  type ErrorReporter,
   type Relationship,
   type Reply,
   type Scheduler,
@@ -100,21 +97,8 @@ export class FakeClassifier implements Classifier {
   }
 }
 
-export class FakeAccess implements AccessGateway {
-  entitlement: Entitlement | null = { kind: "student", trialAvailable: false }
-  trialsStarted: string[] = []
-  async current() {
-    return this.entitlement
-  }
-  async startTrial(xUserId: string) {
-    this.trialsStarted.push(xUserId)
-    this.entitlement = { kind: "trial", trialEndsAt: Date.now() + 3 * 86_400_000, trialAvailable: false }
-    return this.entitlement
-  }
-}
-
 export class FakeConfig implements ConfigSource {
-  config: RemoteConfig = structuredClone(DEFAULT_REMOTE_CONFIG)
+  config: Config = structuredClone(DEFAULT_CONFIG)
   async get() {
     return this.config
   }
@@ -160,26 +144,17 @@ export class FakeClock {
   }
 }
 
-export class FakeReporter implements ErrorReporter {
-  codes: string[] = []
-  record(code: string) {
-    this.codes.push(code)
-  }
-}
-
 export function fakeDeps() {
   let n = 0
   const deps = {
     x: new FakeX(),
     classifier: new FakeClassifier(),
-    access: new FakeAccess(),
     config: new FakeConfig(),
     store: new InMemoryStore(),
     scheduler: new FakeScheduler(),
     clock: new FakeClock(),
     random: () => 0,
     ids: () => `id${++n}`,
-    reporter: new FakeReporter(),
   }
   return deps satisfies EngineDeps
 }

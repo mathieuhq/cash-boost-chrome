@@ -1,5 +1,11 @@
-import type { KeyValue } from "@super-x/adapters-backend"
 import { emptyState, type EngineState, type StateStore, type XAccount } from "@super-x/application"
+
+/** Minimal persistent key-value store (chrome.storage.local in the extension, a Map in tests). */
+export interface KeyValue {
+  get<T>(key: string): Promise<T | undefined>
+  set(key: string, value: unknown): Promise<void>
+  remove(key: string): Promise<void>
+}
 
 export const chromeKv: KeyValue = {
   async get<T>(key: string) {
@@ -13,6 +19,12 @@ export const chromeKv: KeyValue = {
     await chrome.storage.local.remove(key)
   },
 }
+
+/** The user's OpenRouter key: stays in chrome.storage.local, only ever sent to openrouter.ai. */
+export const OPENROUTER_KEY = "openrouter:key"
+
+/** Messages, duration and follow rule applied to new Campaigns (Options tab). */
+export const CAMPAIGN_DEFAULTS = "options:campaignDefaults"
 
 export const ENGINE_CURRENT = "engine:current"
 export const engineKey = (accountId: string) => `engine:${accountId}`

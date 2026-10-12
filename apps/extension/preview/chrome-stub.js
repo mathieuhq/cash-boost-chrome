@@ -1,5 +1,5 @@
 // Fake chrome.* for previewing the built side panel in a plain browser tab (scripts/preview.mjs).
-// Pick a scenario with ?state=panel|empty|signin|connect|tos|paywall|breaker (default: panel).
+// Pick a scenario with ?state=panel|empty|connect|tos|nokey|breaker (default: panel).
 ;(() => {
   const now = Date.now()
   const min = 60_000
@@ -7,17 +7,6 @@
   const scenario = new URLSearchParams(location.search).get("state") ?? "panel"
 
   const account = { id: "100", handle: "jane", name: "Jane", tier: "free" }
-  const me = (entitlement) => ({
-    me: {
-      account: { id: "u1", email: "test@superx.local", name: "Jane", image: null, role: "user" },
-      entitlement,
-      studentEmail: null,
-      checkedAt: now,
-    },
-    checkedAt: now,
-  })
-  const trial = { kind: "trial", trialEndsAt: now + 2 * 24 * hour, trialAvailable: false }
-  const ended = { kind: "none", trialEndsAt: now - hour, trialAvailable: false }
 
   const campaign = (id, text, keyword, patch = {}) => ({
     id,
@@ -99,22 +88,19 @@
     ...patch,
   })
 
-  const signedIn = { "auth:session": "preview-token" }
+  const withKey = { "openrouter:key": "sk-or-preview" }
   const scenarios = {
-    signin: {},
-    connect: { ...signedIn, "backend:me": me(trial) },
-    tos: { ...signedIn, "backend:me": me(trial), "engine:current": "100", "engine:100": engine({ tosAccepted: false }) },
+    connect: withKey,
+    tos: { ...withKey, "engine:current": "100", "engine:100": engine({ tosAccepted: false }) },
     empty: {
-      ...signedIn,
-      "backend:me": me(trial),
+      ...withKey,
       "engine:current": "100",
       "engine:100": engine({ campaigns: [], leads: [], reviews: [], history: [], activity: [], tick: { phase: "idle", pending: 0 } }),
     },
-    panel: { ...signedIn, "backend:me": me(trial), "engine:current": "100", "engine:100": engine() },
-    paywall: { ...signedIn, "backend:me": me(ended), "engine:current": "100", "engine:100": engine() },
+    panel: { ...withKey, "engine:current": "100", "engine:100": engine() },
+    nokey: { "engine:current": "100", "engine:100": engine() },
     breaker: {
-      ...signedIn,
-      "backend:me": me(trial),
+      ...withKey,
       "engine:current": "100",
       "engine:100": engine({ breaker: { reason: "kill_switch", at: now - 5 * min } }),
     },
@@ -145,14 +131,12 @@
 
   // Enough of the service worker for the panel's buttons to do something visible.
   const commands = {
-    signIn: () => set({ ...signedIn, "backend:me": me(trial) }),
-    signOut: () => set({ "auth:session": undefined }),
+    setCampaignDefaults: ({ defaults }) => set({ "options:campaignDefaults": defaults }),
+    setOpenRouterKey: ({ key }) => set({ "openrouter:key": key ?? undefined }),
     connectX: () => set({ "engine:current": "100", "engine:100": engine({ tosAccepted: false }) }),
     acceptTos: () => editEngine((s) => (s.tosAccepted = true)),
     killSwitch: () => editEngine((s) => (s.breaker = { reason: "kill_switch", at: Date.now() })),
     restart: () => editEngine((s) => (s.breaker = null)),
-    linkStudent: () => {},
-    verifyStudent: () => set({ "backend:me": { ...me({ kind: "student", trialAvailable: false }), studentEmail: "eleve@ecole.fr" } }),
     pause: ({ campaignId }) => editEngine((s) => s.campaigns.forEach((c) => c.id === campaignId && (c.status = "paused"))),
     resume: ({ campaignId }) => editEngine((s) => s.campaigns.forEach((c) => c.id === campaignId && (c.status = "active"))),
     delete: ({ campaignId }) => editEngine((s) => (s.campaigns = s.campaigns.filter((c) => c.id !== campaignId))),
@@ -161,7 +145,7 @@
     launch: ({ input }) =>
       editEngine((s) => {
         const id = `c${Date.now()}`
-        s.campaigns.unshift(campaign(id, input?.sourceTweet?.text ?? "Nouvelle campagne", input?.keyword ?? "GUIDE"))
+        s.campaigns.unshift(campaign(id, "Nouvelle campagne", input?.keyword ?? "GUIDE", input?.title ? { title: input.title } : {}))
         s.lastCampaignId = id
       }),
   }

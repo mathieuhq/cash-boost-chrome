@@ -5,6 +5,7 @@ export type CampaignStatus = "active" | "paused" | "finished"
 export const MAX_ACTIVE_CAMPAIGNS = 3
 export const MIN_VARIANTS = 3
 export const MAX_VARIANTS = 5
+export const MAX_TITLE_LENGTH = 80
 
 /** The user's own tweet targeted by a Campaign. */
 export interface SourceTweet {
@@ -17,6 +18,8 @@ export interface SourceTweet {
 
 export interface Campaign {
   id: string
+  /** Chosen by the user; without it the panel shows the tweet's first line. */
+  title?: string
   sourceTweet: SourceTweet
   keyword: string
   leadMagnetUrl: string
@@ -28,11 +31,8 @@ export interface Campaign {
   createdAt: number
   endsAt: number
   status: CampaignStatus
-  /**
-   * Paused by the system, not by the user: resumed when the CircuitBreaker resets (`breaker`)
-   * or when the Entitlement comes back (`access`).
-   */
-  stoppedBy?: "breaker" | "access"
+  /** Paused by the CircuitBreaker, not by the user: resumed when it resets. */
+  stoppedBy?: "breaker"
   /** Comments already looked at (matched, reviewed or rejected), never processed twice. */
   seenCommentIds: string[]
   lastScanAt?: number

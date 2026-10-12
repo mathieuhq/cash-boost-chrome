@@ -10,17 +10,15 @@
     "build": "pnpm css --minify && plasmo build",
     "package": "pnpm build && plasmo package",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "key": "node scripts/extension-key.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",
     "@fontsource/dm-mono": "5.3.0",
-    "@super-x/adapters-backend": "workspace:*",
     "@super-x/adapters-chrome": "workspace:*",
+    "@super-x/adapters-openrouter": "workspace:*",
     "@super-x/adapters-x": "workspace:*",
     "@super-x/application": "workspace:*",
-    "@super-x/contracts": "workspace:*",
     "@super-x/domain": "workspace:*",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -44,18 +42,16 @@
     "vitest": "5.0.2"
   },
   "manifest": {
-    "key": "$CRX_PUBLIC_KEY",
     "permissions": [
       "sidePanel",
       "storage",
       "unlimitedStorage",
       "alarms",
-      "scripting",
-      "identity"
+      "scripting"
     ],
     "host_permissions": [
       "https://x.com/*",
-      "$PLASMO_PUBLIC_BACKEND_URL/*"
+      "https://openrouter.ai/*"
     ]
   }
 }

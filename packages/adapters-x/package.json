@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@super-x/application": "workspace:*",
-    "@super-x/contracts": "workspace:*",
     "@super-x/domain": "workspace:*",
     "x-client-transaction-id": "0.3.2"
   },

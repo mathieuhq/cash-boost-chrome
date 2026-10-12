@@ -1,4 +1,3 @@
-import { MAX_CLASSIFY_BATCH, type Entitlement, type RemoteConfig } from "@super-x/contracts"
 import {
   activeCount,
   between,
@@ -7,6 +6,7 @@ import {
   hasQuota,
   isExpired,
   MAX_ACTIVE_CAMPAIGNS,
+  MAX_TITLE_LENGTH,
   matchesKeyword,
   newLead,
   normalizeLink,
@@ -22,6 +22,7 @@ import {
   type Step,
 } from "@super-x/domain"
 
+import { MAX_CLASSIFY_BATCH, type Config } from "./config"
 import { ClassifierUnavailable, XError, type EngineDeps, type Reply, type XAccount } from "./ports"
 import { ACTIVITY_PER_CAMPAIGN, type ActivityKind, type BreakerReason, type EngineState, type PendingReview } from "./state"
 
@@ -33,6 +34,7 @@ const MAX_TRANSIENT_ERRORS = 3
 const RESTRICTION_COOLDOWN = 24 * HOUR
 
 export interface CampaignInput {
+  title?: string
   tweetUrl: string
   keyword: string
   leadMagnetUrl: string
@@ -54,7 +56,6 @@ export type LaunchError =
   | "tweet_not_found"
   | "not_your_tweet"
   | "x_unreachable"
-  | "no_entitlement"
 
 export type ActOutcome = "done" | "waiting" | "idle" | "blocked"
 
@@ -74,10 +75,6 @@ function isHttpUrl(value: string): boolean {
   } catch {
     return false
   }
-}
-
-function entitled(entitlement: Entitlement | null): boolean {
-  return entitlement !== null && entitlement.kind !== "none"
 }
 
 /**
@@ -142,21 +139,13 @@ export class Engine {
     }
     if (tweet.authorId !== account.id) return { ok: false, error: "not_your_tweet" }
 
-    let entitlement = await this.deps.access.current()
-    if (entitlement?.kind === "none" && entitlement.trialAvailable) {
-      try {
-        entitlement = await this.deps.access.startTrial(account.id)
-      } catch {
-        return { ok: false, error: "no_entitlement" }
-      }
-    }
-    if (!entitled(entitlement)) return { ok: false, error: "no_entitlement" }
-
     const now = this.deps.clock.now()
     const created = await this.withState((s): Result<LaunchError, { campaignId: string }> => {
       if (activeCount(s.campaigns) >= MAX_ACTIVE_CAMPAIGNS) return { ok: false, error: "too_many_campaigns" }
+      const title = input.title?.trim().slice(0, MAX_TITLE_LENGTH)
       const campaign: Campaign = {
         id: this.deps.ids(),
+        ...(title ? { title } : {}),
         sourceTweet: {
           id: tweet.id,
           url: input.tweetUrl.trim(),
@@ -258,11 +247,10 @@ export class Engine {
     await this.withState((s) => this.trip(s, "kill_switch"))
   }
 
-  async restart(): Promise<Result<"too_early" | "remote_kill">> {
+  async restart(): Promise<Result<"too_early">> {
     const now = this.deps.clock.now()
-    const result = await this.withState((s): Result<"too_early" | "remote_kill"> => {
+    const result = await this.withState((s): Result<"too_early"> => {
       if (!s.breaker) return { ok: true }
-      if (s.breaker.reason === "remote_kill") return { ok: false, error: "remote_kill" }
       if (s.breaker.reason === "x_restriction" && now < s.breaker.at + RESTRICTION_COOLDOWN) {
         return { ok: false, error: "too_early" }
       }
@@ -295,14 +283,11 @@ export class Engine {
       return
     }
     await this.useAccount(account)
-    const entitlement = await this.deps.access.current()
 
     const plan = await this.withState((s) => {
       s.tick.lastTickAt = now
       s.tick.nextTickAt = nextTickAt
       if (s.breaker?.reason === "session_expired") this.reset(s)
-      if (config.killSwitch) this.trip(s, "remote_kill")
-      else if (s.breaker?.reason === "remote_kill") this.reset(s)
 
       for (const campaign of s.campaigns) {
         if (campaign.status !== "finished" && isExpired(campaign, now)) {
@@ -310,7 +295,6 @@ export class Engine {
           delete campaign.stoppedBy
         }
       }
-      this.applyAccess(s, entitled(entitlement))
       if (s.breaker) return []
 
       const active = s.campaigns.filter((c) => c.status === "active")
@@ -426,10 +410,9 @@ export class Engine {
     const { clock, random, scheduler } = this.deps
     const now = clock.now()
     const config = await this.deps.config.get()
-    const entitlement = await this.deps.access.current()
 
     const planned = await this.withState((s) => {
-      if (s.breaker || config.killSwitch || !entitled(entitlement)) return { type: "blocked" as const }
+      if (s.breaker) return { type: "blocked" as const }
       if (s.tick.nextActionAt && now < s.tick.nextActionAt) return { type: "wait" as const, at: s.tick.nextActionAt }
       s.history = pruneHistory(s.history, now)
       const limits = config.limits[s.account.tier]
@@ -462,10 +445,7 @@ export class Engine {
 
     const { step, lead, campaign, delivered } = planned
     const outcome = delivered ? { kind: "dm_already_sent" as const } : await this.execute(step, lead, campaign, config)
-    if (outcome.kind === "error") {
-      if (outcome.error.kind !== "dm_closed") this.deps.reporter.record(outcome.error.code)
-      if (await this.handleXError(outcome.error)) return "blocked"
-    }
+    if (outcome.kind === "error" && (await this.handleXError(outcome.error))) return "blocked"
 
     const [minDelay, maxDelay] = config.pacing.actionDelaySeconds
     const nextActionAt = clock.now() + between(random, minDelay, maxDelay) * SECOND
@@ -482,7 +462,7 @@ export class Engine {
 
   // ── Internals ─────────────────────────────────────────────────────────────
 
-  private async execute(step: Step, lead: Lead, campaign: Campaign, config: RemoteConfig): Promise<Outcome> {
+  private async execute(step: Step, lead: Lead, campaign: Campaign, config: Config): Promise<Outcome> {
     const { x, random } = this.deps
     const to = lead.author
     const delivery = () => `${renderTemplate(pickVariant(campaign.templates.dm, random), to)}\n${campaign.leadMagnetUrl}`
@@ -645,18 +625,6 @@ export class Engine {
     s.breaker = null
     for (const campaign of s.campaigns) {
       if (campaign.stoppedBy === "breaker") {
-        campaign.status = "active"
-        delete campaign.stoppedBy
-      }
-    }
-  }
-
-  private applyAccess(s: EngineState, hasAccess: boolean) {
-    for (const campaign of s.campaigns) {
-      if (!hasAccess && campaign.status === "active") {
-        campaign.status = "paused"
-        campaign.stoppedBy = "access"
-      } else if (hasAccess && campaign.stoppedBy === "access" && !s.breaker) {
         campaign.status = "active"
         delete campaign.stoppedBy
       }

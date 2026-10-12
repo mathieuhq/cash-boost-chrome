@@ -12,11 +12,7 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true,
-      "passThroughEnv": [
-        "SUPERX_TEST_AUTH",
-        "PLASMO_PUBLIC_TEST_AUTH"
-      ]
+      "persistent": true
     },
     "test": {
       "dependsOn": [
