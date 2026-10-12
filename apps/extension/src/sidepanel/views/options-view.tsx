@@ -10,9 +10,9 @@ import { Tabs, TabsList, TabsTrigger } from "~components/ui/tabs"
 
 import { cn } from "~lib/utils"
 
-import { DURATIONS, HOURS } from "../draft"
+import { DURATIONS, HOURS, RAMP_UP_DAYS } from "../draft"
 import { OpenRouterKeyForm } from "../gates"
-import type { ActiveHoursChoice, CampaignDefaults } from "../model"
+import type { ActiveHoursChoice, CampaignDefaults, RampUpChoice } from "../model"
 import { useEngine, usePanel } from "../store"
 
 const FULL = "Plafond atteint : les leads attendent dans la file."
@@ -51,11 +51,12 @@ function HourSelect({ label, value, onChange }: { label: string; value: number; 
 
 export function OptionsView() {
   const { state, send } = useEngine()
-  const { defaults, activeHours } = usePanel()
+  const { defaults, activeHours, rampUp: rampUpChoice } = usePanel()
   const { dms, likes, replies, rampUp } = state.quotas
 
   const update = (patch: Partial<CampaignDefaults>) => send({ type: "setCampaignDefaults", defaults: { ...defaults, ...patch } })
   const updateHours = (patch: Partial<ActiveHoursChoice>) => send({ type: "setActiveHours", hours: { ...activeHours, ...patch } })
+  const updateRampUp = (patch: Partial<RampUpChoice>) => send({ type: "setRampUp", rampUp: { ...rampUpChoice, ...patch } })
 
   return (
     <div className="flex flex-col gap-3">
@@ -95,6 +96,31 @@ export function OptionsView() {
           <HourSelect label="Début" value={activeHours.start} onChange={(start) => updateHours({ start })} />
           <HourSelect label="Fin" value={activeHours.end} onChange={(end) => updateHours({ end })} />
         </div>
+      </Card>
+
+      <div className="mt-4">
+        <SectionHeader title="Montée en charge" />
+      </div>
+      <Card>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[13px] leading-[14px] font-medium">Quotas réduits les premiers jours</span>
+          <Switch
+            aria-label="Quotas réduits les premiers jours"
+            checked={rampUpChoice.enabled}
+            onCheckedChange={(enabled) => updateRampUp({ enabled })}
+          />
+        </div>
+        {rampUpChoice.enabled && (
+          <Tabs value={String(rampUpChoice.days)} onValueChange={(value) => updateRampUp({ days: Number(value) })}>
+            <TabsList aria-label="Durée de la montée en charge">
+              {RAMP_UP_DAYS.map((days) => (
+                <TabsTrigger key={days} value={String(days)}>
+                  {days} j
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
       </Card>
 
       <div className="mt-4">

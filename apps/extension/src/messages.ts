@@ -1,13 +1,14 @@
 // Commands sent by the side panel to the service worker, which owns the engine (ADR 0002).
 import type { CampaignInput } from "@super-x/application"
 
-import type { ActiveHoursChoice, CampaignDefaults } from "~sidepanel/model"
+import type { ActiveHoursChoice, CampaignDefaults, RampUpChoice } from "~sidepanel/model"
 
 export type Command =
   /** null removes the key. */
   | { type: "setOpenRouterKey"; key: string | null }
   | { type: "setCampaignDefaults"; defaults: CampaignDefaults }
   | { type: "setActiveHours"; hours: ActiveHoursChoice }
+  | { type: "setRampUp"; rampUp: RampUpChoice }
   | { type: "connectX" }
   | { type: "acceptTos" }
   | { type: "launch"; input: CampaignInput }

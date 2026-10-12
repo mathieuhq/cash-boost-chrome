@@ -29,6 +29,9 @@ export const CAMPAIGN_DEFAULTS = "options:campaignDefaults"
 /** `{ start, end }` local hours chosen in the Options tab; overrides the Config's active hours (ADR 0011). */
 export const ACTIVE_HOURS = "options:activeHours"
 
+/** `{ enabled, days }` chosen in the Options tab; overrides the Config's ramp-up (ADR 0011). */
+export const RAMP_UP = "options:rampUp"
+
 export const ENGINE_CURRENT = "engine:current"
 export const engineKey = (accountId: string) => `engine:${accountId}`
 

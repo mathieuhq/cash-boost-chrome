@@ -7,6 +7,7 @@ import {
   ChromeStateStore,
   chromeKv,
   OPENROUTER_KEY,
+  RAMP_UP,
   XChatTab,
   XTab,
 } from "@super-x/adapters-chrome"
@@ -15,7 +16,8 @@ import { XWebGateway } from "@super-x/adapters-x"
 import { DEFAULT_CONFIG, Engine, type Config } from "@super-x/application"
 
 import type { Command, CommandResult } from "~messages"
-import type { ActiveHoursChoice } from "~sidepanel/model"
+import { userConfig } from "~lib/user-config"
+import type { ActiveHoursChoice, RampUpChoice } from "~sidepanel/model"
 
 const clock = { now: () => Date.now() }
 
@@ -23,15 +25,22 @@ function isHour(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 23
 }
 
-/** The bundled Config, with the active hours the user chose in Options on top. */
+/** The bundled Config, with what the user chose in Options on top. */
 const config = {
   async get(): Promise<Config> {
-    const chosen = await chromeKv.get<Partial<ActiveHoursChoice>>(ACTIVE_HOURS)
-    if (!chosen || !isHour(chosen.start) || !isHour(chosen.end)) return DEFAULT_CONFIG
-    const { pacing } = DEFAULT_CONFIG
-    return { ...DEFAULT_CONFIG, pacing: { ...pacing, activeHours: { ...pacing.activeHours, start: chosen.start, end: chosen.end } } }
+    const [hours, rampUp] = await Promise.all([
+      chromeKv.get<Partial<ActiveHoursChoice>>(ACTIVE_HOURS),
+      chromeKv.get<Partial<RampUpChoice>>(RAMP_UP),
+    ])
+    return userConfig(DEFAULT_CONFIG, {
+      ...(hours && isHour(hours.start) && isHour(hours.end) ? { activeHours: { start: hours.start, end: hours.end } } : {}),
+      ...(rampUp && typeof rampUp.enabled === "boolean" && Number.isInteger(rampUp.days) && rampUp.days! > 0
+        ? { rampUp: { enabled: rampUp.enabled, days: rampUp.days! } }
+        : {}),
+    })
   },
 }
+
 const scheduler = new ChromeScheduler()
 
 const engine = new Engine({
@@ -67,6 +76,13 @@ async function handle(command: Command): Promise<CommandResult> {
       await chromeKv.set(ACTIVE_HOURS, { start, end })
       // The engine re-reads the hours on its next run: wake it so a wider window applies right away.
       await scheduler.scheduleTick(clock.now())
+      await scheduler.scheduleAction(clock.now())
+      return ok
+    }
+    case "setRampUp": {
+      const { enabled, days } = command.rampUp
+      if (typeof enabled !== "boolean" || !Number.isInteger(days) || days <= 0) return { ok: false, error: "invalid_ramp_up" }
+      await chromeKv.set(RAMP_UP, { enabled, days })
       await scheduler.scheduleAction(clock.now())
       return ok
     }

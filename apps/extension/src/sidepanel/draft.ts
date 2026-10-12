@@ -2,7 +2,7 @@ import { MAX_TITLE_LENGTH, MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl } from "@su
 
 import { DEFAULT_CONFIG } from "@super-x/application"
 
-import type { ActiveHoursChoice, CampaignDefaults, CampaignDraft, MessageTemplates } from "./model"
+import type { ActiveHoursChoice, CampaignDefaults, CampaignDraft, MessageTemplates, RampUpChoice } from "./model"
 
 export { MAX_TITLE_LENGTH, MAX_VARIANTS, MIN_VARIANTS, parseTweetUrl }
 export const DURATIONS = [24, 48, 72] as const
@@ -38,6 +38,17 @@ const isHour = (value: unknown): value is number => Number.isInteger(value) && (
 export function readActiveHours(saved: unknown): ActiveHoursChoice {
   const hours = saved as Partial<ActiveHoursChoice> | undefined
   return hours && isHour(hours.start) && isHour(hours.end) ? { start: hours.start, end: hours.end } : { ...DEFAULT_ACTIVE_HOURS }
+}
+
+export const RAMP_UP_DAYS = [3, 7, 14] as const
+
+export const DEFAULT_RAMP_UP: RampUpChoice = { enabled: true, days: DEFAULT_CONFIG.volume.rampUp.days }
+
+/** The ramp-up saved in Options, or the Config's when nothing valid was saved. */
+export function readRampUp(saved: unknown): RampUpChoice {
+  const choice = saved as Partial<RampUpChoice> | undefined
+  const days = RAMP_UP_DAYS.find((d) => d === choice?.days)
+  return choice && typeof choice.enabled === "boolean" && days ? { enabled: choice.enabled, days } : { ...DEFAULT_RAMP_UP }
 }
 
 export function defaultCampaignDefaults(): CampaignDefaults {

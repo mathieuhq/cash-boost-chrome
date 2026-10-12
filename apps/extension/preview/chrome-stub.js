@@ -107,7 +107,7 @@
   }
 
   // Options survive a reload, like chrome.storage.local in the extension; one slot per scenario.
-  const CONFIG_KEYS = ["options:campaignDefaults", "options:activeHours", "openrouter:key"]
+  const CONFIG_KEYS = ["options:campaignDefaults", "options:activeHours", "options:rampUp", "openrouter:key"]
   const saved = `cash-boost-preview:${scenario}`
   const readSaved = () => {
     try {
@@ -152,6 +152,7 @@
   const commands = {
     setCampaignDefaults: ({ defaults }) => set({ "options:campaignDefaults": defaults }),
     setActiveHours: ({ hours }) => set({ "options:activeHours": hours }),
+    setRampUp: ({ rampUp }) => set({ "options:rampUp": rampUp }),
     setOpenRouterKey: ({ key }) => set({ "openrouter:key": key ?? undefined }),
     connectX: () => set({ "engine:current": "100", "engine:100": engine({ tosAccepted: false }) }),
     acceptTos: () => editEngine((s) => (s.tosAccepted = true)),

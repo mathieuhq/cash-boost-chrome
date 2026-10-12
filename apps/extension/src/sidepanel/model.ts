@@ -93,6 +93,12 @@ export interface ActiveHoursChoice {
   end: number
 }
 
+/** The first days on reduced limits (ADR 0011): on or off, and how long. */
+export interface RampUpChoice {
+  enabled: boolean
+  days: number
+}
+
 export interface CampaignDefaults {
   templates: MessageTemplates
   mustFollow: boolean

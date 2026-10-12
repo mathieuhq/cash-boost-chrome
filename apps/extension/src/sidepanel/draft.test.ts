@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { defaultCampaignDefaults, emptyDraft, parseTweetUrl, readActiveHours, readDefaults, toVariants, validateDraft } from "./draft"
+import { defaultCampaignDefaults, emptyDraft, parseTweetUrl, readActiveHours, readDefaults, readRampUp, toVariants, validateDraft } from "./draft"
 import type { CampaignDraft } from "./model"
 
 function validDraft(patch: Partial<CampaignDraft> = {}): CampaignDraft {
@@ -68,5 +68,13 @@ describe("readActiveHours", () => {
     expect(readActiveHours({ start: 25, end: 3 })).toEqual({ start: 8, end: 21 })
     expect(readActiveHours({ start: 10, end: 22 })).toEqual({ start: 10, end: 22 })
     expect(readActiveHours({ start: 0, end: 0 })).toEqual({ start: 0, end: 0 })
+  })
+})
+
+describe("readRampUp", () => {
+  it("falls back to the bundled ramp-up when nothing valid was saved", () => {
+    expect(readRampUp(undefined)).toEqual({ enabled: true, days: 7 })
+    expect(readRampUp({ enabled: false, days: 5 })).toEqual({ enabled: true, days: 7 })
+    expect(readRampUp({ enabled: false, days: 14 })).toEqual({ enabled: false, days: 14 })
   })
 })
