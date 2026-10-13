@@ -9,7 +9,7 @@ import { notify } from "~components/sx/toast-pill"
 import { downloadCsv, leadsToCsv } from "~lib/csv"
 import { clock, plural } from "~lib/format"
 
-import { MAX_ACTIVE_CAMPAIGNS, type PanelState } from "../model"
+import { MAX_ACTIVE_CAMPAIGNS, type CampaignView, type PanelState } from "../model"
 import { errorMessage } from "../errors"
 import { useEngine, usePanel } from "../store"
 
@@ -31,8 +31,32 @@ export const CampaignsView = forwardRef<HTMLTextAreaElement, { now: number }>(
     const { state, send } = useEngine()
     const { defaults } = usePanel()
     const current = state.campaigns.filter((c) => c.status !== "finished")
+    const finished = state.campaigns.filter((c) => c.status === "finished")
     const running = current.filter((c) => c.status === "active").length
     const delivered = state.campaigns.reduce((sum, c) => sum + c.sent, 0)
+
+    const card = (campaign: CampaignView) => (
+      <CampaignCard
+        key={campaign.id}
+        campaign={campaign}
+        now={now}
+        onPause={() => send({ type: "pause", campaignId: campaign.id })}
+        onResume={async () => {
+          const result = await send({ type: "resume", campaignId: campaign.id })
+          if (!result.ok) notify({ children: errorMessage(result.error) })
+        }}
+        onDelete={async () => {
+          const result = await send({ type: "delete", campaignId: campaign.id })
+          notify({ children: result.ok ? `Campagne ${campaign.keyword} supprimée` : errorMessage(result.error) })
+        }}
+        onExport={() =>
+          downloadCsv(
+            `super-x-${campaign.keyword.toLowerCase()}.csv`,
+            leadsToCsv(state.leads.filter((l) => l.campaignId === campaign.id))
+          )
+        }
+      />
+    )
 
     const focusComposer = () => {
       const el = typeof composerRef === "function" ? null : composerRef?.current
@@ -70,31 +94,20 @@ export const CampaignsView = forwardRef<HTMLTextAreaElement, { now: number }>(
         {running > 0 && state.tick.rest && (
           <p className="text-xs text-muted-foreground">{restSentence(state.tick.rest)}</p>
         )}
-        {current.map((campaign) => (
-          <CampaignCard
-            key={campaign.id}
-            campaign={campaign}
-            now={now}
-            onPause={() => send({ type: "pause", campaignId: campaign.id })}
-            onResume={async () => {
-              const result = await send({ type: "resume", campaignId: campaign.id })
-              if (!result.ok) notify({ children: errorMessage(result.error) })
-            }}
-            onDelete={async () => {
-              const result = await send({ type: "delete", campaignId: campaign.id })
-              notify({ children: result.ok ? `Campagne ${campaign.keyword} supprimée` : errorMessage(result.error) })
-            }}
-            onExport={() =>
-              downloadCsv(
-                `super-x-${campaign.keyword.toLowerCase()}.csv`,
-                leadsToCsv(state.leads.filter((l) => l.campaignId === campaign.id))
-              )
-            }
-          />
-        ))}
+        {current.map(card)}
         {current.length < MAX_ACTIVE_CAMPAIGNS && (
           <EmptySlot onClick={focusComposer}>Emplacement libre · nouvelle campagne</EmptySlot>
         )}
+
+        {finished.length > 0 && (
+          <div className="mt-4">
+            <SectionHeader
+              title="Campagnes terminées"
+              action={<span className="text-mono text-muted-foreground">{finished.length}</span>}
+            />
+          </div>
+        )}
+        {finished.map(card)}
       </div>
     )
   }

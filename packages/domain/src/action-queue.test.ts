@@ -43,10 +43,20 @@ describe("pickNextAction (ActionQueue)", () => {
     expect(pickNextAction({ campaigns, leads, lastCampaignId: "b", allowed: always })).toMatchObject({ leadId: "a1" })
   })
 
-  it("skips paused and finished campaigns", () => {
+  it("skips paused campaigns", () => {
+    const campaigns = [campaign("a", { status: "paused" })]
+    const leads = [lead("a1", "a", 1)]
+    expect(pickNextAction({ campaigns, leads, lastCampaignId: undefined, allowed: always })).toBeNull()
+  })
+
+  it("keeps serving a finished campaign until its queue is empty", () => {
     const campaigns = [campaign("a", { status: "paused" }), campaign("b", { status: "finished" })]
     const leads = [lead("a1", "a", 1), lead("b1", "b", 1)]
-    expect(pickNextAction({ campaigns, leads, lastCampaignId: undefined, allowed: always })).toBeNull()
+    expect(pickNextAction({ campaigns, leads, lastCampaignId: undefined, allowed: always })).toEqual({
+      campaignId: "b",
+      leadId: "b1",
+      step: { kind: "dm" },
+    })
   })
 
   it("lets a lead whose step has Quota go before one that waits", () => {

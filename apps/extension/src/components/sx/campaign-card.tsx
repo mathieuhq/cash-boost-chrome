@@ -22,12 +22,16 @@ interface CampaignCardProps {
 export function CampaignCard({ campaign, now, onPause, onResume, onExport, onDelete }: CampaignCardProps) {
   const { status } = campaign
   const live = status === "active"
+  // A finished Campaign still sends to whoever commented in time.
+  const emptying = status === "finished" && campaign.queued > 0
   const meta =
     status === "active"
       ? `fin dans ${duration(campaign.endsAt - now)}`
       : status === "paused"
         ? "en pause"
-        : "terminée"
+        : emptying
+          ? "terminée · envoi des derniers DMs"
+          : "terminée"
 
   return (
     <article className="flex flex-col gap-4 rounded-xl bg-card p-4 text-card-foreground shadow-card">
@@ -49,10 +53,10 @@ export function CampaignCard({ campaign, now, onPause, onResume, onExport, onDel
 
       {campaign.log.length > 0 && (
         <ActionLog
-          // Nothing runs on a paused or finished Campaign: its current action waits in the queue.
+          // Nothing runs on a paused Campaign: its current action waits in the queue.
           items={campaign.log
             .slice(-3)
-            .map((item) => (!live && item.state === "current" ? { ...item, state: "queued" } : item))}
+            .map((item) => (status === "paused" && item.state === "current" ? { ...item, state: "queued" } : item))}
         />
       )}
 

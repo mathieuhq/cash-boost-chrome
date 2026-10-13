@@ -50,6 +50,11 @@ export function isExpired(campaign: Campaign, now: number): boolean {
   return now >= campaign.endsAt
 }
 
+/** Active Campaigns, and finished ones until their queue is empty: whoever commented in time still gets the lead magnet. */
+export function isServed(campaign: Campaign): boolean {
+  return campaign.status !== "paused"
+}
+
 export function activeCount(campaigns: readonly Campaign[]): number {
   return campaigns.filter((c) => c.status === "active").length
 }

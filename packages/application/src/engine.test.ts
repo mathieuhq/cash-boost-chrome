@@ -197,6 +197,26 @@ describe("tick: scanning Comments", () => {
     expect(ctx.deps.store.state.campaigns[0]!.status).toBe("finished")
   })
 
+  it("still delivers to whoever commented in time once a Campaign is finished, without scanning again", async () => {
+    const ctx = await withCampaign({ durationHours: 24 })
+    ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "GUIDE", author: author("1") })
+    await ctx.engine.tick()
+    ctx.deps.clock.advance(24 * HOUR)
+    ctx.deps.x.addReply(TWEET.id, { id: "r2", text: "GUIDE", author: author("2") })
+    const actions = ctx.deps.scheduler.actions.length
+    // The service worker restarts: its Tick hands the queue of the finished Campaign back to the Actions.
+    await ctx.engine.tick()
+    expect(ctx.deps.store.state.campaigns[0]!.status).toBe("finished")
+    expect(ctx.deps.scheduler.actions.length).toBeGreaterThan(actions)
+
+    await drain(ctx)
+    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toEqual([expect.stringMatching(/^dm 1 /)])
+    // Queue empty: the finished Campaign no longer wakes the engine.
+    const ticks = ctx.deps.scheduler.ticks.length
+    await ctx.engine.tick()
+    expect(ctx.deps.scheduler.ticks).toHaveLength(ticks)
+  })
+
   it("schedules the next Tick 2 to 5 min later and, after a moment to notice them, an Action on new Comments", async () => {
     const ctx = await withCampaign()
     ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "GUIDE", author: author("1") })

@@ -103,7 +103,7 @@ export function project(state: EngineState, input: { config: Config; now: number
     },
     tick: {
       phase: state.tick.phase,
-      pending: state.tick.pending || campaigns.reduce((sum, c) => sum + (c.status === "active" ? c.queued : 0), 0),
+      pending: state.tick.pending || campaigns.reduce((sum, c) => sum + (c.status === "paused" ? 0 : c.queued), 0),
       nextAt: Math.max(now, state.tick.nextTickAt ?? now),
       ...(state.tick.rest && state.tick.rest.until > now ? { rest: state.tick.rest } : {}),
       ...(state.tick.lastDmAt ? { lastDmAt: state.tick.lastDmAt } : {}),

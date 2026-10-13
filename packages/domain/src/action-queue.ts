@@ -1,4 +1,4 @@
-import type { Campaign } from "./campaign"
+import { isServed, type Campaign } from "./campaign"
 import { nextStep, type Lead, type Step } from "./lead"
 import type { ActionKind } from "./quota"
 
@@ -9,7 +9,7 @@ export interface NextAction {
 }
 
 /**
- * ActionQueue: round-robin between active Campaigns (starting after the last one served),
+ * ActionQueue: round-robin between served Campaigns (starting after the last one served),
  * oldest Lead first within a Campaign, skipping steps whose Quota is exhausted.
  */
 export function pickNextAction(input: {
@@ -18,7 +18,7 @@ export function pickNextAction(input: {
   lastCampaignId: string | undefined
   allowed: (kind: ActionKind) => boolean
 }): NextAction | null {
-  const active = input.campaigns.filter((c) => c.status === "active")
+  const active = input.campaigns.filter(isServed)
   if (active.length === 0) return null
   const start = active.findIndex((c) => c.id === input.lastCampaignId) + 1
 

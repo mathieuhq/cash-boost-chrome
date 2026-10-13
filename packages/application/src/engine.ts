@@ -7,12 +7,14 @@ import {
   hasQuota,
   isAwake,
   isExpired,
+  isServed,
   localDay,
   MAX_ACTIVE_CAMPAIGNS,
   MAX_TITLE_LENGTH,
   matchesKeyword,
   newLead,
   nextStep,
+  pendingCount,
   nextWakeAt,
   normalizeLink,
   parseTweetUrl,
@@ -281,9 +283,11 @@ export class Engine {
   async tick(): Promise<void> {
     const { clock, random, scheduler } = this.deps
     const now = clock.now()
-    // Nothing running (nor stopped by the system): no X call, no next Tick until a launch or resume.
+    // Nothing running, stopped by the system or left in a finished queue: no X call, no next Tick until a launch.
     const status = await this.withState((s) => ({
-      running: s.campaigns.some((c) => c.status === "active" || c.stoppedBy),
+      running: s.campaigns.some(
+        (c) => c.status === "active" || c.stoppedBy || (c.status === "finished" && pendingCount(c, s.leads) > 0)
+      ),
       quiet: s.tick.quietTicks ?? 0,
     }))
     if (!status?.running) return
@@ -551,7 +555,7 @@ export class Engine {
     let next: { leadId: string; campaignId: string; step: Step } | null
     if (lead) {
       const campaign = s.campaigns.find((c) => c.id === lead.campaignId)
-      const step = campaign?.status === "active" ? nextStep(lead, campaign.lastScanAt ?? 0) : null
+      const step = campaign && isServed(campaign) ? nextStep(lead, campaign.lastScanAt ?? 0) : null
       next = step && allowed(step.kind) ? { leadId: lead.id, campaignId: lead.campaignId, step } : null
     } else {
       next = pickNextAction({ campaigns: s.campaigns, leads: s.leads, lastCampaignId: s.lastCampaignId, allowed })
