@@ -197,26 +197,26 @@ describe("tick: scanning Comments", () => {
     expect(ctx.deps.store.state.campaigns[0]!.status).toBe("finished")
   })
 
-  it("schedules the next Tick 5 to 15 min later and, after a moment to notice them, an Action on new Comments", async () => {
+  it("schedules the next Tick 2 to 5 min later and, after a moment to notice them, an Action on new Comments", async () => {
     const ctx = await withCampaign()
     ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "GUIDE", author: author("1") })
     await ctx.engine.tick()
-    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 5 * MIN)
-    expect(ctx.deps.scheduler.actions.at(-1)).toBe(ctx.deps.clock.time + 20_000)
+    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 2 * MIN)
+    expect(ctx.deps.scheduler.actions.at(-1)).toBe(ctx.deps.clock.time + 10_000)
   })
 
-  it("looks at a quiet post less often: 20 to 45 min after 3 scans without a new Comment", async () => {
+  it("looks at a quiet post less often: 6 to 12 min after 3 scans without a new Comment", async () => {
     const ctx = await withCampaign()
     for (let i = 0; i < 3; i++) await ctx.engine.tick()
-    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 5 * MIN)
+    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 2 * MIN)
     await ctx.engine.tick()
-    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 20 * MIN)
+    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 6 * MIN)
 
     ctx.deps.x.addReply(TWEET.id, { id: "r1", text: "bof", author: author("1") })
     ctx.deps.classifier.probabilities.set("bof", 0.1)
     await ctx.engine.tick()
     await ctx.engine.tick()
-    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 5 * MIN)
+    expect(ctx.deps.scheduler.ticks.at(-1)).toBe(ctx.deps.clock.time + 2 * MIN)
   })
 
   it("sleeps at night: no scan, the next Tick waits for the morning", async () => {
@@ -362,7 +362,7 @@ describe("act: processing Leads", () => {
     expect(ctx.deps.store.state.leads[0]).toMatchObject({ delivery: "sent", ack: "sent" })
   })
 
-  it("handles one Lead in a sitting: DM, like and reply a few seconds apart, then waits 25 s to 4 min", async () => {
+  it("handles one Lead in a sitting: DM, like and reply a few seconds apart, then waits 8 s to 1 min", async () => {
     const ctx = await withCampaign()
     const waits: number[] = []
     ctx.deps.wait = async (ms) => void waits.push(ms)
@@ -372,25 +372,27 @@ describe("act: processing Leads", () => {
     ctx.deps.clock.advance(MIN)
     await ctx.engine.act()
     expect(ctx.deps.x.calls).toEqual([expect.stringMatching(/^dm 1 /), "like r1", "reply r1 C'est envoyé en DM @user1"])
-    expect(waits).toEqual([5_000, 5_000])
-    expect(ctx.deps.scheduler.actions.at(-1)).toBe(ctx.deps.clock.time + 25_000)
+    expect(waits).toEqual([3_000, 3_000])
+    expect(ctx.deps.scheduler.actions.at(-1)).toBe(ctx.deps.clock.time + 8_000)
     await ctx.engine.act()
     expect(ctx.deps.x.calls).toHaveLength(3)
   })
 
-  it("takes a break of 8 to 35 min after a burst of Actions", async () => {
+  it("takes a break of 3 to 12 min after a burst of Actions", async () => {
     const ctx = await withCampaign()
-    for (const id of ["1", "2"]) ctx.deps.x.addReply(TWEET.id, { id: `r${id}`, text: "GUIDE", author: author(id) })
+    for (const id of ["1", "2", "3", "4"]) ctx.deps.x.addReply(TWEET.id, { id: `r${id}`, text: "GUIDE", author: author(id) })
     await ctx.engine.tick()
-    ctx.deps.clock.advance(MIN)
-    await ctx.engine.act()
+    for (let i = 0; i < 3; i++) {
+      ctx.deps.clock.advance(MIN)
+      await ctx.engine.act()
+    }
     expect(ctx.deps.store.state.tick.rest).toBeUndefined()
     ctx.deps.clock.advance(MIN)
-    // 6 Actions done: past the smallest burst (5).
+    // 12 Actions done: past the smallest burst (10).
     await ctx.engine.act()
-    expect(ctx.deps.x.calls).toHaveLength(6)
-    expect(ctx.deps.store.state.tick.rest).toEqual({ reason: "break", until: ctx.deps.clock.time + 8 * MIN })
-    expect(ctx.deps.scheduler.actions.at(-1)).toBe(ctx.deps.clock.time + 8 * MIN)
+    expect(ctx.deps.x.calls).toHaveLength(12)
+    expect(ctx.deps.store.state.tick.rest).toEqual({ reason: "break", until: ctx.deps.clock.time + 3 * MIN })
+    expect(ctx.deps.scheduler.actions.at(-1)).toBe(ctx.deps.clock.time + 3 * MIN)
   })
 
   it("does nothing at night and resumes in the morning", async () => {
@@ -463,17 +465,17 @@ describe("act: processing Leads", () => {
 
   it("ramps the limits up over the first week: 40 % of them on day one", async () => {
     const ctx = await withCampaign({ durationHours: 24 * 30 })
-    // Free tier: 20 DMs a day × 0.4 (ramp) × 0.7 (smallest daily target) → 6.
-    for (let i = 1; i <= 7; i++) ctx.deps.x.addReply(TWEET.id, { id: `r${i}`, text: "GUIDE", author: author(String(i)) })
+    // Free tier: 50 DMs a day × 0.4 (ramp) × 0.7 (smallest daily target), rounded up as the ramp moves during the day → 15.
+    for (let i = 1; i <= 16; i++) ctx.deps.x.addReply(TWEET.id, { id: `r${i}`, text: "GUIDE", author: author(String(i)) })
     await ctx.engine.tick()
     await drain(ctx, 100)
-    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toHaveLength(6)
+    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toHaveLength(15)
     expect(ctx.deps.store.state.firstActionAt).toBeDefined()
 
     ctx.deps.clock.advance(8 * 24 * HOUR)
     await ctx.engine.tick()
     await drain(ctx, 100)
-    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toHaveLength(7)
+    expect(ctx.deps.x.calls.filter((c) => c.startsWith("dm "))).toHaveLength(16)
   })
 
   it("draws today's target once a day", async () => {
